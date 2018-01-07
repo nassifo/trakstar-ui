@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "trakstar-gui", "trakstar-gu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "trakstar-interface", "trakstar-interface\trakstar-interface.csproj", "{69DA6915-1582-43A5-8778-DC546158CA5A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealTimeMultiThreadWPF", "RealTimeMultiThreadWPF\RealTimeMultiThreadWPF.csproj", "{42ADC578-8392-42DD-B72F-9A6DAC27B212}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{69DA6915-1582-43A5-8778-DC546158CA5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{69DA6915-1582-43A5-8778-DC546158CA5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{69DA6915-1582-43A5-8778-DC546158CA5A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{42ADC578-8392-42DD-B72F-9A6DAC27B212}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{42ADC578-8392-42DD-B72F-9A6DAC27B212}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{42ADC578-8392-42DD-B72F-9A6DAC27B212}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{42ADC578-8392-42DD-B72F-9A6DAC27B212}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

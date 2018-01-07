@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ConsoleApplication1
+namespace TrakstarInterface
 {
     public enum MESSAGE_TYPE
     {

@@ -9,8 +9,6 @@
         Title="Simple Realtime Chart" SizeToContent="WidthAndHeight" ResizeMode="CanResize" Loaded="Window_Loaded"
         >
     <DockPanel>
-        <Label Content="Advanced Software Engineering" Height="25" DockPanel.Dock="Top" FontFamily="Arial" FontStyle="Italic" FontWeight="Bold" 
-               FontSize="13" Background="#FF02098D" Foreground="#FFF4FF04" HorizontalContentAlignment="Right"/>
         <StackPanel DockPanel.Dock="Left" Width="120" Background="#FFF0F0F0">
             <RadioButton x:Name="runPB" Style="{StaticResource {x:Type ToggleButton}}" HorizontalContentAlignment="Left" 
                          Checked="runPB_CheckedChanged" Unchecked="runPB_CheckedChanged">

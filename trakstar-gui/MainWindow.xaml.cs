@@ -112,7 +112,7 @@ namespace TrakstarGUI
         //
         private void runPB_CheckedChanged(object sender, RoutedEventArgs e)
         {
-            chartUpdateTimer.IsEnabled = runPB.IsChecked == true;
+            //chartUpdateTimer.IsEnabled = runPB.IsChecked == true;
         }
 
         //
@@ -208,6 +208,7 @@ namespace TrakstarGUI
                     c.formatValue(dataSeriesA[dataSeriesA.Length - 1], " {value|2} "));
                 layer.addDataSet(dataSeriesB, 0x00cc00, "Beta: <*bgColor=CCFFCC*>" +
                     c.formatValue(dataSeriesB[dataSeriesB.Length - 1], " {value|2} "));
+                if (runPB.IsChecked == true) // Shows that we can add extra plots live smoothly
                 layer.addDataSet(dataSeriesC, 0x0000ff, "Gamma: <*bgColor=CCCCFF*>" +
                     c.formatValue(dataSeriesC[dataSeriesC.Length - 1], " {value|2} "));
 
