@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -30,6 +31,9 @@ namespace TrakstarInterface
         [DllImport("ATC3DG64.DLL", EntryPoint = "SetSystemParameter")]
         public static extern int SetSystemParameterDouble(SYSTEM_PARAMETER_TYPE parameterType, ref double val, int bufferSize);
 
+        [DllImport("ATC3DG64.DLL", EntryPoint = "SetSystemParameter")]
+        public static extern int SetSystemParameterByte(SYSTEM_PARAMETER_TYPE parameterType, ref byte val, int bufferSize);
+
         [DllImport("ATC3DG64.DLL", EntryPoint = "SetSensorParameter")]
         public static extern int SetSensorParameterData(ushort sensorID, SENSOR_PARAMETER_TYPE parameterType, ref DATA_FORMAT_TYPE pBuffer, int bufferSize);
 
@@ -39,8 +43,11 @@ namespace TrakstarInterface
         public static extern ulong GetSensorStatus(ushort sensorID);
         unsafe static void Main(string[] args)
         {
-            int records = 10000;
-            double rate = 50.0f; // Sampling rate in Hz
+            int records = 1000;
+            double rate = 100.0f; // Sampling rate in Hz
+            byte decimationRate = 3;
+
+            Stopwatch stopWatch = new Stopwatch();
 
             Console.WriteLine("Attempting to initialize trakstar system...");
             int errorCode = InitializeBIRDSystem();
@@ -112,7 +119,12 @@ namespace TrakstarInterface
             // Set system rate
             errorCode = SetSystemParameterDouble(SYSTEM_PARAMETER_TYPE.MEASUREMENT_RATE, ref rate, Marshal.SizeOf(rate));
             if(errorCode!= (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
-           
+
+            Console.WriteLine("Setting decimation rate.");
+            // Set decimation rate 
+            errorCode = SetSystemParameterByte(SYSTEM_PARAMETER_TYPE.REPORT_RATE, ref decimationRate, 2*Marshal.SizeOf(decimationRate));
+            if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+
             // Search for the first attached transmitter and turn it on
             for (short id = 0; id < tracker.numberTransmitters; id++)
             {
@@ -143,6 +155,7 @@ namespace TrakstarInterface
             DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] record = new DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[32];
             StreamWriter outfile = new StreamWriter("data.txt", append: true);
             int count = 0;
+            stopWatch.Start();
             while (count<records)
             {
                 count++;
@@ -180,8 +193,15 @@ namespace TrakstarInterface
                 Console.WriteLine("Data point: " + count);
 
             }
-            
-            
+            stopWatch.Stop();
+
+            TimeSpan ts = stopWatch.Elapsed;
+            // Format and display the TimeSpan value.
+            string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
+                ts.Hours, ts.Minutes, ts.Seconds,
+                ts.Milliseconds / 10);
+            Console.WriteLine("\n\nRunTime " + elapsedTime);
+
             #region Disposal Block/ Closing Block
             // Turn off the transmitter using code -1
             short xMtrOff = -1;
