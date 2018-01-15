@@ -37,13 +37,17 @@ namespace TrakstarInterface
         [DllImport("ATC3DG64.DLL", EntryPoint = "SetSensorParameter")]
         public static extern int SetSensorParameterData(ushort sensorID, SENSOR_PARAMETER_TYPE parameterType, ref DATA_FORMAT_TYPE pBuffer, int bufferSize);
 
+        [DllImport("ATC3DG64.DLL", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int GetSynchronousRecord(ushort sensorID, [Out] DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records, int recordSize);
+
         [DllImport("ATC3DG64.DLL")]
-        public static unsafe extern int GetSynchronousRecord(ushort sensorID, DOUBLE_POSITION_ANGLES_TIME_Q_RECORD* pRecord, int recordSize);
+        public static extern int GetAsynchronousRecord(ushort sensorID, [Out] DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records, int recordSize);
+
         [DllImport("ATC3DG64.DLL")]
         public static extern ulong GetSensorStatus(ushort sensorID);
-        unsafe static void Main(string[] args)
+        static void Main(string[] args)
         {
-            int records = 1000;
+            int maxRecords = 10000;
             double rate = 100.0f; // Sampling rate in Hz
             byte decimationRate = 3;
 
@@ -60,6 +64,7 @@ namespace TrakstarInterface
 
             Console.WriteLine("Found trakstar!" + MESSAGE_TYPE.SIMPLE_MESSAGE);
 
+            // Check if these struct layouts need to be sequential ------------------------------------------------------------
             SYSTEM_CONFIGURATION tracker;
 
             SENSOR_CONFIGURATION[] pSensor;
@@ -151,42 +156,45 @@ namespace TrakstarInterface
             Console.WriteLine("Press any key to start record");
             Console.ReadKey();
 
-          
-            DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] record = new DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[32];
-            StreamWriter outfile = new StreamWriter("data.txt", append: true);
+            StreamWriter outfile = new StreamWriter("data.txt", append: false);
+
+            DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records = new DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[tracker.numberSensors];
+            
             int count = 0;
             stopWatch.Start();
-            while (count<records)
+
+            while (count<maxRecords)
             {
                 count++;
 
-                fixed (DOUBLE_POSITION_ANGLES_TIME_Q_RECORD* pRecord = record)
+                errorCode = GetSynchronousRecord(0xffff, records, Marshal.SizeOf(records[0]) * tracker.numberSensors);
+                if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
                 {
-                    errorCode = GetSynchronousRecord(0xffff, pRecord, Marshal.SizeOf(record[0]) * tracker.numberSensors);
-                    if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
-                    {
-                        errorHandler(errorCode);
-                    }
+                    errorHandler(errorCode);
                 }
-
+                
                 // scan the sensors and request a record if the sensor is physically attached
-                for (ushort sensorID = 0; sensorID < tracker.numberSensors; sensorID++)
+                for (ushort sensorID = 0; sensorID < 1; sensorID++)
                 {
                     // get the status of the last data record
                     // only report the data if everything is okay
                     ulong status = GetSensorStatus(sensorID);
-
+                    
                     if (status == 0x00000000)
-                    { 
+                    {
+                        /*
                             outfile.WriteLine("ID:" + sensorID +
                             "    coordinates: x:" +
-                            record[sensorID].x + " y: " +
-                            record[sensorID].y + " z: " +
-                            record[sensorID].z + " a: " +
-                            record[sensorID].a + " e: " +
-                            record[sensorID].e + " r: " +
-                            record[sensorID].r + " time: " +
-                            record[sensorID].time);
+                            records[sensorID].x + " y: " +
+                            records[sensorID].y + " z: " +
+                            records[sensorID].z + " a: " +
+                            records[sensorID].a + " e: " +
+                            records[sensorID].e + " r: " +
+                            records[sensorID].r + " time: " +
+                            records[sensorID].time);
+                            */
+
+                        outfile.WriteLine(count + ", " + sensorID + ", " + records[sensorID].x + ", " + records[sensorID].y + ", " + records[sensorID].z + ", ");
                     }
                 }
                 
@@ -212,7 +220,7 @@ namespace TrakstarInterface
             // Close file
             outfile.Close();
             #endregion
-
+            Console.WriteLine("\nagc mode: " + tracker.agcMode);
             Console.ReadKey(); 
         }
 

@@ -333,7 +333,7 @@ namespace TrakstarInterface
     };
 
     [StructLayout(LayoutKind.Sequential)]
-    public unsafe struct DOUBLE_POSITION_ANGLES_TIME_Q_RECORD
+    public struct DOUBLE_POSITION_ANGLES_TIME_Q_RECORD
     {
         public double x;
         
