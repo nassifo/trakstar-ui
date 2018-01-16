@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Threading;
 using System.Windows.Controls;
 using ChartDirector;
+using TrakstarInterface;
 
 namespace TrakstarGUI
 {
@@ -15,6 +16,7 @@ namespace TrakstarGUI
         private double[] dataSeriesA = new double[sampleSize];
         private double[] dataSeriesB = new double[sampleSize];
         private double[] dataSeriesC = new double[sampleSize];
+        private Trakstar bird = new Trakstar();
 
         // In this demo, we use a data generator driven by a timer to generate realtime data. The
         // nextDataTime is an internal variable used by the data generator to keep track of which
@@ -35,7 +37,7 @@ namespace TrakstarGUI
             // Data generation rate = 50ms
             dataRateTimer.Interval = new TimeSpan(0, 0, 0, 0, 10);
             dataRateTimer.Tick += dataRateTimer_Tick;
-
+            
             // Chart update rate, which can be different from the data generation rate.
             chartUpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, int.Parse(samplePeriod.Text));
             chartUpdateTimer.Tick += chartUpdateTimer_Tick;
@@ -64,9 +66,7 @@ namespace TrakstarGUI
                 // it may be replaced by some data acquisition code.
                 //
                 double p = nextDataTime.Ticks / 10000000.0 * 4;
-                double dataA = 150 + 100 * Math.Sin(p * 50);
-                double dataB = 150 + 100 * Math.Sin(p / 27.7) * Math.Sin(p / 10.1);
-                double dataC = 150 + 100 * Math.Cos(p / 6.7) * Math.Cos(p / 11.9);
+                double dataA = bird.GetSyncRecord();
 
                 // After obtaining the new values, we need to update the data arrays.
                 shiftData(dataSeriesA, dataA);

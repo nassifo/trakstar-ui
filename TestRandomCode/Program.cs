@@ -1,24 +1,38 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
+using TrakstarInterface;
 
 public class Example
 {
     public static void Main()
     {
-        int[] arr = { 2, 4, 6, 8, 10, 12, 14, 16, 18, 20 };
-        unsafe
+        Trakstar J = new Trakstar();
+
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+
+        int delay = 1;
+        var cancellationTokenSource = new CancellationTokenSource();
+        var token = cancellationTokenSource.Token;
+        var listener = Task.Factory.StartNew(() =>
         {
-            fixed (int* parr = arr)
+            while (true)
             {
-                IntPtr ptr = new IntPtr(parr);
-                // Get the size of an array element.
-                int size = sizeof(int);
-                for (int ctr = 0; ctr < arr.Length; ctr++)
-                {
-                    IntPtr newPtr = IntPtr.Add(ptr, ctr * size);
-                    Console.Write("{0}   ", Marshal.ReadInt32(ptr));
-                }
+                //poll HW
+                Task. J.GetSyncRecord();
+                Thread.Sleep(delay);
+                if (token.IsCancellationRequested)
+                    break;
             }
-        }
+
+            //cleanup
+        }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+        watch.Stop();
+        var elapsedMs = watch.ElapsedMilliseconds;
+
+        Console.WriteLine("Total time (ms):" + elapsedMs);
+        J.TrakstarOff();
     }
 }

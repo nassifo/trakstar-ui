@@ -301,6 +301,7 @@ namespace TrakstarInterface
 
 
     // STRUCTURES
+    [StructLayout(LayoutKind.Sequential)]
     public struct SYSTEM_CONFIGURATION
     {
         public double measurementRate;
@@ -314,6 +315,7 @@ namespace TrakstarInterface
         public int metric;
     };
 
+    [StructLayout(LayoutKind.Sequential)]
     public struct SENSOR_CONFIGURATION
     {
         public uint serialNumber;
@@ -323,6 +325,7 @@ namespace TrakstarInterface
         public int attached;
     };
 
+    [StructLayout(LayoutKind.Sequential)]
     public struct TRANSMITTER_CONFIGURATION
     {
         public uint serialNumber;

@@ -1,17 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace TrakstarInterface
 {
-    class Program
+    public class Trakstar
     {
-        // Calling in the functions from DLL
+        // Todo: see if I can encapsulate the pinvoke methods in a cleaner way
+        #region PInvoke Methods
         [DllImport("ATC3DG64.DLL")]
         public static extern int InitializeBIRDSystem();
 
@@ -26,16 +23,16 @@ namespace TrakstarInterface
         public static extern int GetTransmitterConfiguration(ushort transmitterID, out TRANSMITTER_CONFIGURATION sensorConfiguration);
 
         [DllImport("ATC3DG64.DLL", EntryPoint = "SetSystemParameter")]
-        public static extern int SetSystemParameterShort(SYSTEM_PARAMETER_TYPE parameterType, ref short id, int bufferSize);
+        public static extern int SetSystemParameter(SYSTEM_PARAMETER_TYPE parameterType, ref short id, int bufferSize);
 
         [DllImport("ATC3DG64.DLL", EntryPoint = "SetSystemParameter")]
-        public static extern int SetSystemParameterDouble(SYSTEM_PARAMETER_TYPE parameterType, ref double val, int bufferSize);
+        public static extern int SetSystemParameter(SYSTEM_PARAMETER_TYPE parameterType, ref double val, int bufferSize);
 
         [DllImport("ATC3DG64.DLL", EntryPoint = "SetSystemParameter")]
-        public static extern int SetSystemParameterByte(SYSTEM_PARAMETER_TYPE parameterType, ref byte val, int bufferSize);
+        public static extern int SetSystemParameter(SYSTEM_PARAMETER_TYPE parameterType, ref byte val, int bufferSize);
 
         [DllImport("ATC3DG64.DLL", EntryPoint = "SetSensorParameter")]
-        public static extern int SetSensorParameterData(ushort sensorID, SENSOR_PARAMETER_TYPE parameterType, ref DATA_FORMAT_TYPE pBuffer, int bufferSize);
+        public static extern int SetSensorParameter(ushort sensorID, SENSOR_PARAMETER_TYPE parameterType, ref DATA_FORMAT_TYPE pBuffer, int bufferSize);
 
         [DllImport("ATC3DG64.DLL", CallingConvention = CallingConvention.Cdecl)]
         public static extern int GetSynchronousRecord(ushort sensorID, [Out] DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records, int recordSize);
@@ -45,34 +42,33 @@ namespace TrakstarInterface
 
         [DllImport("ATC3DG64.DLL")]
         public static extern ulong GetSensorStatus(ushort sensorID);
-        static void Main(string[] args)
+        
+        #endregion
+
+        #region Public Methods
+        public Trakstar(double sampling_frequency = 100.0f)
         {
-            int maxRecords = 10000;
-            double rate = 100.0f; // Sampling rate in Hz
-            byte decimationRate = 3;
+            // Set sampling frequency (default 100Hz)
+            samplingFrequency = sampling_frequency;
 
-            Stopwatch stopWatch = new Stopwatch();
+            // Divider so we only get the data points corresponding to new samples
+            decimationRate = 3;
 
+            #region Initialize hardware
+            // Initialize the BIRD system
             Console.WriteLine("Attempting to initialize trakstar system...");
             int errorCode = InitializeBIRDSystem();
-
             if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
             {
                 Console.WriteLine("Error Code: " + errorCode);
                 errorHandler(errorCode);
             }
+            else
+            {
+                Console.WriteLine("Trakstar intialized successfully.");
+            }
 
-            Console.WriteLine("Found trakstar!" + MESSAGE_TYPE.SIMPLE_MESSAGE);
-
-            // Check if these struct layouts need to be sequential ------------------------------------------------------------
-            SYSTEM_CONFIGURATION tracker;
-
-            SENSOR_CONFIGURATION[] pSensor;
-
-            TRANSMITTER_CONFIGURATION[] pXmtr;
-
-            Console.WriteLine("Setup configuration classes successfully.");
-
+            // Retrieve Trakstar hardware configuration (such as number of sensors, xmtrs, etc)
             errorCode = GetBIRDSystemConfiguration(out tracker);
             if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
             {
@@ -81,13 +77,13 @@ namespace TrakstarInterface
             }
             else
             {
-                Console.WriteLine("No errors getting system configuration");
+                Console.WriteLine("System configuration successfully retrieved.");
                 Console.WriteLine("Tracker number of sensors: " + tracker.numberSensors);
                 Console.WriteLine("Tracker number of transmitters: " + tracker.numberTransmitters);
             }
 
+            // Retrieve sensor information (such as sensor ID, serial number, etc)
             pSensor = new SENSOR_CONFIGURATION[tracker.numberSensors];
-
             for (ushort i = 0; i < tracker.numberSensors; i++)
             {
                 errorCode = GetSensorConfiguration(i, out pSensor[i]);
@@ -102,8 +98,7 @@ namespace TrakstarInterface
                 }
             }
 
-            Console.WriteLine("Finished collecting sensor configuration stage, getting xmtr info now");
-
+            // Retrieve Xmtr configuration (such as serial number, etc)
             pXmtr = new TRANSMITTER_CONFIGURATION[tracker.numberTransmitters];
             for (ushort i = 0; i < tracker.numberTransmitters; i++)
             {
@@ -118,16 +113,22 @@ namespace TrakstarInterface
                     Console.WriteLine("Sensor " + i + "= attached:" + pXmtr[i].attached + " channel num: " + pXmtr[i].channelNumber + " board num: " + pXmtr[i].boardNumber + " serial num: " + pXmtr[i].serialNumber.ToString());
                 }
             }
+            #endregion
 
-            Console.WriteLine("Setting system rate.");
-            // Assuming system was init correctly and sensors and transmitters are found correctly, we can start collecting data:
-            // Set system rate
-            errorCode = SetSystemParameterDouble(SYSTEM_PARAMETER_TYPE.MEASUREMENT_RATE, ref rate, Marshal.SizeOf(rate));
-            if(errorCode!= (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+            /*
+             * Sets the sampling rate of the device, decimation rate, turns on xmtr
+             * to do: Check to see if we really do need the refs on the parameters going in like samplingFrequency etc
+             */
+            #region Set System Parameters
+            Console.WriteLine("Setting system sampling rate to: " + samplingFrequency);
+            double _samplingFrequency = samplingFrequency;
+            errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.MEASUREMENT_RATE, ref _samplingFrequency, Marshal.SizeOf(samplingFrequency));
+            if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
 
             Console.WriteLine("Setting decimation rate.");
+            byte _decimationRate = decimationRate;
             // Set decimation rate 
-            errorCode = SetSystemParameterByte(SYSTEM_PARAMETER_TYPE.REPORT_RATE, ref decimationRate, 2*Marshal.SizeOf(decimationRate));
+            errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.REPORT_RATE, ref _decimationRate, 2 * Marshal.SizeOf(decimationRate));
             if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
 
             // Search for the first attached transmitter and turn it on
@@ -135,104 +136,92 @@ namespace TrakstarInterface
             {
                 if (pXmtr[id].attached == 1)
                 {
-                    errorCode = SetSystemParameterShort(SYSTEM_PARAMETER_TYPE.SELECT_TRANSMITTER, ref id, Marshal.SizeOf(id));
+                    errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.SELECT_TRANSMITTER, ref id, Marshal.SizeOf(id));
                     if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
                     else Console.WriteLine("Turned on xmtr: " + pXmtr[id].serialNumber + " successfully! Press any key to continue..");
                     break;
                 }
             }
-            
-            Console.ReadKey();
+            #endregion
 
-            // Set the data format type for each attached sensor.
+            /*
+             * Sets the sensor DATA_FORMAT_TYPE
+             * To do: set it through another function instead of inside constructor
+             */
+            #region Set Sensor Parameters
             for (ushort i = 0; i < tracker.numberSensors; i++)
             {
                 DATA_FORMAT_TYPE type = DATA_FORMAT_TYPE.DOUBLE_POSITION_ANGLES_TIME_Q;
-                errorCode = SetSensorParameterData(i, SENSOR_PARAMETER_TYPE.DATA_FORMAT, ref type, Marshal.SizeOf((int)type));
+                errorCode = SetSensorParameter(i, SENSOR_PARAMETER_TYPE.DATA_FORMAT, ref type, Marshal.SizeOf((int)type));
                 if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
                 else Console.WriteLine("\nSetting data format of sensor " + i + " was successful.");
             }
-
-            Console.WriteLine("Press any key to start record");
-            Console.ReadKey();
-
-            StreamWriter outfile = new StreamWriter("data.txt", append: false);
-
-            DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records = new DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[tracker.numberSensors];
-            
-            int count = 0;
-            stopWatch.Start();
-
-            while (count<maxRecords)
-            {
-                count++;
-
-                errorCode = GetSynchronousRecord(0xffff, records, Marshal.SizeOf(records[0]) * tracker.numberSensors);
-                if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
-                {
-                    errorHandler(errorCode);
-                }
-                
-                // scan the sensors and request a record if the sensor is physically attached
-                for (ushort sensorID = 0; sensorID < 1; sensorID++)
-                {
-                    // get the status of the last data record
-                    // only report the data if everything is okay
-                    ulong status = GetSensorStatus(sensorID);
-                    
-                    if (status == 0x00000000)
-                    {
-                        /*
-                            outfile.WriteLine("ID:" + sensorID +
-                            "    coordinates: x:" +
-                            records[sensorID].x + " y: " +
-                            records[sensorID].y + " z: " +
-                            records[sensorID].z + " a: " +
-                            records[sensorID].a + " e: " +
-                            records[sensorID].e + " r: " +
-                            records[sensorID].r + " time: " +
-                            records[sensorID].time);
-                            */
-
-                        outfile.WriteLine(count + ", " + sensorID + ", " + records[sensorID].x + ", " + records[sensorID].y + ", " + records[sensorID].z + ", ");
-                    }
-                }
-                
-                Console.WriteLine("Data point: " + count);
-
-            }
-            stopWatch.Stop();
-
-            TimeSpan ts = stopWatch.Elapsed;
-            // Format and display the TimeSpan value.
-            string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
-                ts.Hours, ts.Minutes, ts.Seconds,
-                ts.Milliseconds / 10);
-            Console.WriteLine("\n\nRunTime " + elapsedTime);
-
-            #region Disposal Block/ Closing Block
-            // Turn off the transmitter using code -1
-            short xMtrOff = -1;
-            errorCode = SetSystemParameterShort(SYSTEM_PARAMETER_TYPE.SELECT_TRANSMITTER, ref xMtrOff, Marshal.SizeOf(xMtrOff));
-            if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
-            else Console.WriteLine("Turned off xmtr successfully!");
-
-            // Close file
-            outfile.Close();
             #endregion
-            Console.WriteLine("\nagc mode: " + tracker.agcMode);
-            Console.ReadKey(); 
         }
 
+        // Turns off the Xmtr
+        public void TrakstarOff()
+        {
+            // Turn off the transmitter using code -1
+            short xMtrOff = -1;
+            int errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.SELECT_TRANSMITTER, ref xMtrOff, Marshal.SizeOf(xMtrOff));
+            if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+            else Console.WriteLine("Turned off xmtr successfully!");
+        }
+
+        // Get a single data record
+        public DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] GetSyncRecord()
+        {
+            DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records = new DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[tracker.numberSensors];
+
+            int errorCode = GetSynchronousRecord(0xffff, records, Marshal.SizeOf(records[0]) * tracker.numberSensors);
+            if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+
+            return records;
+        }
+        #endregion
+
+        #region Private Members
+        private SYSTEM_CONFIGURATION tracker;
+
+        private SENSOR_CONFIGURATION[] pSensor;
+
+        private TRANSMITTER_CONFIGURATION[] pXmtr;
+        #endregion
+
+        #region Public Members
+        public double samplingFrequency
+        {
+            get; set;
+        }
+
+        public byte decimationRate
+        {
+            get; set;
+        }
+
+        public DATA_FORMAT_TYPE trackerDataFormat
+        {
+            get; set;
+        }
+        #endregion
+
+        #region Private Methods
+        // Turns a BIRD error code into an error message
         static private void errorHandler(int error)
         {
+            // Not sure if 1024 is big enough size for the buffer, need to double check this eventually
             StringBuilder pBuffer = new StringBuilder(1024);
 
             while (error != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
             {
-                error = GetErrorText(error, pBuffer, pBuffer.Capacity, MESSAGE_TYPE.SIMPLE_MESSAGE);
-                Console.WriteLine(pBuffer.ToString());
+                error = GetErrorText(error, pBuffer, pBuffer.Capacity, MESSAGE_TYPE.VERBOSE_MESSAGE);
+                using (StreamWriter stream = new StreamWriter("log.txt", true))
+                {
+                    stream.WriteLine(DateTime.Now.ToString() + ": " + pBuffer.ToString());
+                }
             }
         }
+        #endregion
     }
 }
