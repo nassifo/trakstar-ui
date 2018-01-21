@@ -2,6 +2,8 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace TrakstarInterface
 {
@@ -159,6 +161,12 @@ namespace TrakstarInterface
             #endregion
         }
 
+        public Trakstar(string s)
+        {
+            // Blank test constructor
+            samplingFrequency = 100.0f;
+        }
+
         // Turns off the Xmtr
         public void TrakstarOff()
         {
@@ -169,9 +177,10 @@ namespace TrakstarInterface
             else Console.WriteLine("Turned off xmtr successfully!");
         }
 
-        // Get a single data record
-        public DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] GetSyncRecord()
+        // Get Data Sync
+        public DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] FetchData()
         {
+            
             DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records = new DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[tracker.numberSensors];
 
             int errorCode = GetSynchronousRecord(0xffff, records, Marshal.SizeOf(records[0]) * tracker.numberSensors);
@@ -179,6 +188,53 @@ namespace TrakstarInterface
 
             return records;
         }
+
+        // Get Data Async
+        public async Task<DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[]> FetchDataAsync()
+        {
+            return await Task.Factory.StartNew(() => FetchData());
+        }
+
+        // Get sampling rate in ms
+        public int GetSamplingRate()
+        {
+            return (int)((1 / samplingFrequency) * 1000);
+        }
+
+        // Get number of attached sensors
+        public int GetNumberOfSensors()
+        {
+            return tracker.numberSensors;
+        }
+        // There is probably a better way of doing this.. but this will do for now
+        public double getCoordinateFromRecords(DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records,int sensorId, int coordinate)
+        {
+            double val = 0;
+
+            if (sensorId < records.Length)
+            {
+                switch (coordinate)
+                {
+                    case 0:
+                        val = records[sensorId].x; break;
+                    case 1:
+                        val = records[sensorId].y; break;
+                    case 2:
+                        val = records[sensorId].z; break;
+                    case 3:
+                        val = records[sensorId].a; break;
+                    case 4:
+                        val = records[sensorId].e; break;
+                    case 5:
+                        val = records[sensorId].r; break;
+                    default:
+                        val = 0.0; break;
+                }
+            }
+
+            return val;
+        }
+
         #endregion
 
         #region Private Members

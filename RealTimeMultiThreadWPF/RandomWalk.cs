@@ -9,8 +9,9 @@
 using System;
 using System.Threading;
 using System.Diagnostics;
+using TrakstarInterface;
 
-namespace ChartDirectorSampleCode
+namespace TrakstarGUI
 {
     class RandomWalk
     {
@@ -21,11 +22,12 @@ namespace ChartDirectorSampleCode
         // Random number generator thread
         Thread pingThread;
         private bool stopThread;
-        
+        static public Trakstar bird = new Trakstar();
+
         // The period of the data series in milliseconds. This random series implementation just use the 
         // windows timer for timing. In many computers, the default windows timer resolution is 1/64 sec,
         // or 15.6ms. This means the interval may not be exactly accurate.
-        const int interval = 100;
+        int interval = (int)((1/bird.samplingFrequency)*1000);
 
         public RandomWalk(DataHandler handler)
         {
@@ -33,7 +35,7 @@ namespace ChartDirectorSampleCode
         }
 
         //
-        // Start the random generator thread
+        // Start the thread
         //        
         public void start()
         {
@@ -45,7 +47,7 @@ namespace ChartDirectorSampleCode
         }
 
         //
-        // Stop the random generator thread
+        // Stop the thread
         //
         public void stop()
         {
@@ -54,22 +56,19 @@ namespace ChartDirectorSampleCode
                 pingThread.Join();
             pingThread = null;
             stopThread = false;
+            bird.TrakstarOff();
         }
 
         //
         // The random generator thread
         //
-        void threadProc(object obj)
+        async void threadProc(object obj)
         {
             long currentTime = 0;
             long nextTime = 0;
 
-            // Random walk variables
-            Random rand = new Random(9);
-            double series0 = 32;
-            double series1 = 63;
-            double upperLimit = 94;
-            double scaleFactor = Math.Sqrt(interval * 0.1);
+            double series0 = 0;
+            double series1 = 0;
 
             // Variables to keep track of the timing
             Stopwatch timer = new Stopwatch();
@@ -80,10 +79,11 @@ namespace ChartDirectorSampleCode
                 // Compute the next data value
                 currentTime = timer.Elapsed.Ticks / 10000;
 
-                if ((series0 = Math.Abs(series0 + (rand.NextDouble() - 0.5) * scaleFactor)) > upperLimit)
-                    series0 = upperLimit * 2 - series0;
-                if ((series1 = Math.Abs(series1 + (rand.NextDouble() - 0.5) * scaleFactor)) > upperLimit)
-                    series1 = upperLimit * 2 - series1;
+                var records = await bird.FetchDataAsync();
+
+                series0 = records[0].x;
+
+                series1 = records[0].y;
 
                 // Call the handler
                 handler(currentTime / 1000.0, series0, series1);

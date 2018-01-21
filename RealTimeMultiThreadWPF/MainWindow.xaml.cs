@@ -5,7 +5,7 @@ using Microsoft.Win32;
 using ChartDirector;
 
 
-namespace ChartDirectorSampleCode
+namespace TrakstarGUI
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -71,7 +71,10 @@ namespace ChartDirectorSampleCode
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             if (null != dataSource)
+            {
                 dataSource.stop();
+            }
+
         }
 
         //

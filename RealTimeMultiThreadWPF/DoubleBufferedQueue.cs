@@ -8,7 +8,7 @@
 
 using System;
 
-namespace ChartDirectorSampleCode
+namespace TrakstarGUI
 {
     public class DoubleBufferedQueue<T>
     {

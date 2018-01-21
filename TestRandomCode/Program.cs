@@ -8,31 +8,41 @@ public class Example
 {
     public static void Main()
     {
-        Trakstar J = new Trakstar();
+        Trakstar bird = new Trakstar("hello");
 
-        var watch = System.Diagnostics.Stopwatch.StartNew();
+        int count = 0;
 
-        int delay = 1;
-        var cancellationTokenSource = new CancellationTokenSource();
-        var token = cancellationTokenSource.Token;
-        var listener = Task.Factory.StartNew(() =>
+        while (count < 1000)
         {
-            while (true)
+            var recordsTask = bird.FetchDataAsync();
+            recordsTask.ContinueWith(task =>
             {
-                //poll HW
-                Task. J.GetSyncRecord();
-                Thread.Sleep(delay);
-                if (token.IsCancellationRequested)
-                    break;
-            }
+                if (task.Status == TaskStatus.RanToCompletion)
+                {
+                    var records = task.Result;
 
-            //cleanup
-        }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                    foreach(var record in records)
+                    {
+                        Console.WriteLine("X: " + record.x + " Y: " + record.y);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Exception occured.");
+                }
+            });
+            Console.WriteLine(count);
+            count++;
+        }
 
-        watch.Stop();
-        var elapsedMs = watch.ElapsedMilliseconds;
-
-        Console.WriteLine("Total time (ms):" + elapsedMs);
-        J.TrakstarOff();
+        Console.WriteLine("Finished.");
+        Console.ReadKey();
+        bird.TrakstarOff();
+        Console.ReadKey();
     }
+
+
+
+
+
 }
