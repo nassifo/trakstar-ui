@@ -11,15 +11,19 @@ using System.Threading.Tasks;
 
 namespace TrakstarGUI
 {
-    public partial class RealTimeDemoWindow : Window
+    public partial class TrakstarWindow : Window
     {
+        // Rich text box for logging
+        private const int _maxCapacity = 10000;
+        private Queue<string> _messageQueue = new Queue<string>(_maxCapacity);
+
         private const int bufferSize = 500;
         private DateTime[] timeStamps = new DateTime[bufferSize];
 
         private List<SensorBuffer> dataBufferList = new List<SensorBuffer>();
 
         // Instance of the Trakstar
-        private Trakstar bird = new Trakstar();
+        private Trakstar bird;
 
         // Date timer to keep track of when to sample bird again, the timer interval is the sampling
         // frequency of our device
@@ -28,17 +32,27 @@ namespace TrakstarGUI
         // Timer used to updated the chart
         private DispatcherTimer chartUpdateTimer = new DispatcherTimer(DispatcherPriority.Render);
 
-        public RealTimeDemoWindow()
+        public TrakstarWindow()
         {
             InitializeComponent();
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            // Initialize Trakstar system
+            try
+            {
+                bird = new Trakstar();
+            }
+            catch (Exception ex)
+            {
+                LogMessageToWindow(ex.ToString()); return;
+            }
+
             // Data generation rate = bird.SamplingRate (100Hz or 10ms by default)
             dataRateTimer.Interval = new TimeSpan(0, 0, 0, 0, bird.GetSamplingRate());
             dataRateTimer.Tick += dataRateTimer_Tick;
-            
+
             // Chart update rate, which can be different from the data generation rate.
             chartUpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, int.Parse(samplePeriod.Text));
             chartUpdateTimer.Tick += chartUpdateTimer_Tick;
@@ -55,17 +69,15 @@ namespace TrakstarGUI
             {
                 for (int j = 0; j < 6; j++)
                 {
-                    // Initialize empty buffer
-                    double[] dataBuffer = new double[bufferSize];
-
                     SensorBuffer sensorBuffer = new SensorBuffer();
 
                     sensorBuffer.id = i;
                     sensorBuffer.coordinate = j;
-                    sensorBuffer.buffer = dataBuffer;
+                    sensorBuffer.buffer = new double[bufferSize]; ;
 
                     dataBufferList.Add(sensorBuffer);
                 }
+
             }
 
             // Now can start the timers for data collection and chart update
@@ -75,6 +87,7 @@ namespace TrakstarGUI
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            if (bird != null)
             bird.TrakstarOff();
         }
 
@@ -83,28 +96,37 @@ namespace TrakstarGUI
         //
         private async void dataRateTimer_Tick(object sender, EventArgs e)
         {
-            // Get all the new data records for all sensors and all degrees of freedom (x,y,z,a,e,o)
-            var records = await bird.FetchDataAsync();
+            DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records;
 
-            if (records.Length > 0)
+            try // THIS NEEDS TO BE TESTED IF THE GETDATA METHOD EXCEPTION PROPOGATES TO THE WINDOW !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             {
-                foreach (var dataBuffer in dataBufferList)
-                {
-                    // After obtaining the new values, we need to update the data arrays.
-                    shiftData(dataBuffer.buffer, bird.getCoordinateFromRecords(records, dataBuffer.id, dataBuffer.coordinate)); // Shift in new sensor data;                  
-                }
+                // Get all the new data records for all sensors and all degrees of freedom (x,y,z,a,e,o)
+                records = await bird.FetchDataAsync();
+            }
+            catch (Exception ex)
+            {
+                LogMessageToWindow(ex.ToString()); return;
+            }
 
-                shiftData(timeStamps, DateTime.Now); // Add time stamp to mark the time we retreived the data
+            foreach (var dataBuffer in dataBufferList)
+            {
+                // After obtaining the new values, we need to update the data arrays
+                // TODO: CHECK IF ARRAY.COPY IS FASTER AND MAYBE MAKE THIS METHOD ASYNC ALSO?
+                shiftData(dataBuffer.buffer, bird.getCoordinateFromRecords(records, dataBuffer.id, dataBuffer.coordinate)); // Shift in new sensor data;                  
+            }
 
-                // Write data to file
-                using (StreamWriter outputFile = new StreamWriter("records.txt", append: true))
+            // TODO: CHECK IF ARRAY.COPY IS FASTER AND MAYBE MAKE THIS METHOD ASYNC ALSO?
+            shiftData(timeStamps, DateTime.Now); // Add time stamp to mark the time we retreived the data
+
+            // Write data to file
+            using (StreamWriter outputFile = new StreamWriter("records.txt", append: true))
+            {
+                for (int i = 0; i < records.Length; i++)
                 {
-                    for (int i = 0; i < records.Length; i++)
-                    {
-                        await outputFile.WriteLineAsync(i + ", " + records[i].x + ", " + records[i].y + ", " + records[i].z + ", " + records[i].time);
-                    }
+                    await outputFile.WriteLineAsync(i + ", " + records[i].x + ", " + records[i].y + ", " + records[i].z + ", " + records[i].time);
                 }
-            }           
+            }
+                      
         }
 
         //
@@ -121,6 +143,7 @@ namespace TrakstarGUI
         //
         private void runPB_CheckedChanged(object sender, RoutedEventArgs e)
         {
+            if (bird != null) // This logic will need to change later
             chartUpdateTimer.IsEnabled = runPB.IsChecked == true;
         }
 
@@ -218,6 +241,7 @@ namespace TrakstarGUI
 
         //
         // Utility to shift a DataTime value into an array
+        // TODO: LOOK AT USING ARRAY.COPY INSTEAD OF MANUAL SHIFTING
         //
         private void shiftData<T>(T[] data, T newValue)
         {
@@ -233,6 +257,23 @@ namespace TrakstarGUI
             public int coordinate;
 
             public double[] buffer;
+        }
+
+        public void LogMessageToWindow(string text)
+        {
+            LogWindow.AppendText(text);
+            LogWindow.AppendText("\u2028"); // Linebreak, not paragraph break
+            LogWindow.ScrollToEnd();
+        }
+
+        private void Edit_Info_Click(object sender, RoutedEventArgs e)
+        {
+            MessageBox.Show("Created by Omar Nassif. Test message.", "Info Box");
+        }
+
+        private void CSVSaveButton_Click(object sender, RoutedEventArgs e)
+        {
+
         }
     }
 }

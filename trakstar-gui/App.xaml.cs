@@ -13,5 +13,6 @@ namespace trakstar_gui
     /// </summary>
     public partial class App : Application
     {
+        
     }
 }
