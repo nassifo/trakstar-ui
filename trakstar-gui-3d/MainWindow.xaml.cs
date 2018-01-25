@@ -1,21 +1,22 @@
-﻿using System;
-using System.Windows;
-using System.Windows.Threading;
-using System.Windows.Controls;
-using ChartDirector;
-using TrakstarInterface;
+﻿using ChartDirector;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
-using System.Threading.Tasks;
-using System.Timers;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Threading;
+using TrakstarInterface;
 
-namespace TrakstarGUI
+namespace trakstar_gui_3d
 {
-    public partial class TrakstarWindow : Window
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
     {
-        private const int bufferSize = 500;
+        private const int bufferSize = 300;
         private DateTime[] timeStamps = new DateTime[bufferSize];
 
         private List<SensorBuffer> dataBufferList = new List<SensorBuffer>();
@@ -25,16 +26,15 @@ namespace TrakstarGUI
 
         // Timer used to updated the chart
         private DispatcherTimer chartUpdateTimer = new DispatcherTimer(DispatcherPriority.Render);
-        private TimeSpan dataUpdateInterval;
-
+     
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         CancellationToken token;
 
-        public TrakstarWindow()
+        public MainWindow()
         {
-            InitializeComponent();   
+            InitializeComponent();
         }
-        
+
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             bird = new Trakstar();
@@ -55,8 +55,6 @@ namespace TrakstarGUI
             // Chart update rate, which can be different from the data generation rate.
             chartUpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, int.Parse(samplePeriod.Text));
             chartUpdateTimer.Tick += chartUpdateTimer_Tick;
-
-            dataUpdateInterval = new TimeSpan(0, 0, 0, 0, bird.GetSamplingRate());
 
             // Initialize data buffer to no data.
             for (int i = 0; i < timeStamps.Length; ++i)
@@ -79,8 +77,8 @@ namespace TrakstarGUI
             chartUpdateTimer.Start();
 
             token = cancellationTokenSource.Token;
-            
-            var listener = Task.Factory.StartNew( () =>
+
+            var listener = Task.Factory.StartNew(() =>
             {
                 FileStream s = new FileStream("records.csv", FileMode.Create, FileAccess.Write,
                           FileShare.None, 4096,
@@ -91,7 +89,7 @@ namespace TrakstarGUI
                 while (true)
                 {
                     DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records;
-                    
+
                     try
                     {
                         // Get all the new data records for all sensors and all degrees of freedom (x,y,z,a,e,o)
@@ -107,8 +105,8 @@ namespace TrakstarGUI
                     {
                         outputFile.Write(i + ", " + records[i].x + ", " + records[i].y + ", " + records[i].z + ", " + records[i].time + ", ");
                     }
-
                     outputFile.WriteLine();
+
 
                     foreach (var dataBuffer in dataBufferList)
                     {
@@ -117,10 +115,14 @@ namespace TrakstarGUI
                         shiftData(dataBuffer.zBuffer, records[dataBuffer.id].z);
                     }
 
-                    shiftData(timeStamps, DateTime.Now); 
-                    
-                    if (token.IsCancellationRequested) break;
+                    // TODO: CHECK IF ARRAY.COPY IS FASTER AND MAYBE MAKE THIS METHOD ASYNC ALSO?
+                    shiftData(timeStamps, DateTime.Now); // Add time stamp to mark the time we retreived the data
+
+                    if (token.IsCancellationRequested)
+                        break;
                 }
+
+                //cleanup
             }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
 
@@ -131,6 +133,7 @@ namespace TrakstarGUI
                 cancellationTokenSource.Cancel();
                 bird.TrakstarOff();
             }
+
         }
 
         //
@@ -147,8 +150,8 @@ namespace TrakstarGUI
         //
         private void runPB_CheckedChanged(object sender, RoutedEventArgs e)
         {
-            if (bird.IsActive()) 
-            chartUpdateTimer.IsEnabled = runPB.IsChecked == true;
+            if (bird.IsActive())
+                chartUpdateTimer.IsEnabled = runPB.IsChecked == true;
         }
 
         //
@@ -175,78 +178,48 @@ namespace TrakstarGUI
         //
         private void drawChart(WPFChartViewer viewer)
         {
-            // Create an XYChart object 600 x 270 pixels in size, with light grey (f4f4f4) 
-            // background, black (000000) border, 1 pixel raised effect, and with a rounded frame.
-            XYChart c = new XYChart((int) (0.8*TrakstarUIWindow.ActualWidth), (int) (0.8* TrakstarUIWindow.ActualHeight), 0xf4f4f4, 0x000000, 1);
-            
-            c.setPlotArea(55, 62, (int)(0.8*TrakstarUIWindow.ActualWidth), (int)(0.65*TrakstarUIWindow.ActualHeight), 0xffffff, -1, -1, 0xcccccc, 0xcccccc);
-            
-            c.setClipping();
+            // Create a ThreeDScatterChart object of size 720 x 600 pixels
+            ThreeDScatterChart c = new ThreeDScatterChart((int)(0.8 * TrakstarUIWindow.ActualWidth), (int)(0.8 * TrakstarUIWindow.ActualHeight));
 
-            // Add a title to the chart
-            c.addTitle("Sensor position", "Times New Roman Bold Italic", 15
-                ).setBackground(0xdddddd, 0x000000, Chart.glassEffect());
+            // Add a title to the chart using 20 points Times New Roman Italic font
+            c.addTitle("3D Scatter Chart (1)  ", "Times New Roman Italic", 20);
 
-            // Add a legend box at the top of the plot area with 9pts Arial Bold font. We set the 
-            // legend box to the same width as the plot area and use grid layout (as opposed to 
-            // flow or top/down layout). This distributes the 3 legend icons evenly on top of the 
-            // plot area.
-            LegendBox b = c.addLegend2( (c.getWidth()-130), 60, 1, "Arial Bold", 9);
-            
-            b.setBackground(Chart.Transparent, Chart.Transparent);
-            b.setWidth((int)(0.7 * TrakstarUIWindow.ActualWidth));
+            // Set the center of the plot region at (350, 280), and set width x depth
+            // x height to 360 x 360 x 270 pixels
+            c.setPlotRegion((int)(0.5 * TrakstarUIWindow.ActualWidth), (int)(0.4 * TrakstarUIWindow.ActualHeight), 360, 360, 270);
 
-            // Configure the y-axis with a 10pts Arial Bold axis title
-            c.yAxis().setTitle("Position (Inches)", "Arial Bold", 10);
-
-            // Scale Y axis from minimum sensor position to maximum position (0 inch - 35 inch)
-            c.yAxis().setDateScale(-35, 35, 5);
-
-            // Configure the x-axis to auto-scale with at least 75 pixels between major tick and 15 
-            // pixels between minor ticks. This shows more minor grid lines on the chart.
-            c.xAxis().setTickDensity(75, 15);
-          
-            // Set the axes width to 2 pixels
-            c.xAxis().setWidth(2);
-            c.yAxis().setWidth(2);        
-
-            // Now we add the data to the chart
-            DateTime lastTime = timeStamps[timeStamps.Length - 1];
-            if (lastTime != DateTime.MinValue)
+            // Add a scatter group to the chart using 11 pixels glass sphere symbols,
+            // in which the color depends on the z value of the symbol
+            foreach (var sensorData in dataBufferList)
             {
-                // Set up the x-axis scale
-                c.xAxis().setDateScale(lastTime.AddSeconds(
-                    -(dataUpdateInterval.TotalSeconds) * timeStamps.Length), lastTime);
-                   
-                // Set the x-axis label format
-                c.xAxis().setLabelFormat("{value|hh:nn:ss}");
-                
-                // Create a line layer to plot the lines
-                LineLayer layer = c.addLineLayer2();
-
-                // The x-coordinates are the timeStamps.
-                layer.setXData(timeStamps);
-
-                // Set line thickness
-                layer.setLineWidth(8);
-
-                foreach (var sensorData in dataBufferList)
-                {
-                    if (sensorData.id == 0)
-                    {
-                        layer.addDataSet(sensorData.xBuffer, -1, "sensor #: " + (sensorData.id + 1) + "<*bgColor=FFCCCC*>" + c.formatValue(sensorData.xBuffer[sensorData.xBuffer.Length - 1], " {value|2} "));
-                        layer.addDataSet(sensorData.yBuffer, -1, "sensor #: " + (sensorData.id + 1) + "<*bgColor=FFCCCC*>" + c.formatValue(sensorData.yBuffer[sensorData.yBuffer.Length - 1], " {value|2} "));
-                        layer.addDataSet(sensorData.zBuffer, -1, "sensor #: " + (sensorData.id + 1) + "<*bgColor=FFCCCC*>" + c.formatValue(sensorData.zBuffer[sensorData.zBuffer.Length - 1], " {value|2} "));
-                    }
-                }
+                if (sensorData.id == 0)
+                c.addScatterGroup(sensorData.xBuffer, sensorData.yBuffer, sensorData.zBuffer, "", Chart.CircleShape, 11,
+                Chart.SameAsMainColor);
             }
+
+            // Add a color axis (the legend) in which the left center is anchored at
+            // (645, 270). Set the length to 200 pixels and the labels on the right
+            // side.
+            c.setColorAxis(50, 10, Chart.Left, 20, Chart.Right);
+
+            // Set the x, y and z axis titles using 10 points Arial Bold font
+            c.xAxis().setTitle("X-Axis Place Holder", "Arial Bold", 10);
+            c.yAxis().setTitle("Y-Axis Place Holder", "Arial Bold", 10);
+            c.zAxis().setTitle("Z-Axis Place Holder", "Arial Bold", 10);
+
+            c.zAxis().setLinearScale(-35, 35, 5);
+            c.xAxis().setLinearScale(-35, 35, 5);
+            c.yAxis().setLinearScale(0, 35, 5);
+
 
             // Assign the chart to the WinChartViewer
             viewer.Chart = c;
+            
         }
 
         //
         // Utility to shift a DataTime value into an array
+        // TODO: LOOK AT USING ARRAY.COPY INSTEAD OF MANUAL SHIFTING
         //
         private void shiftData<T>(T[] data, T newValue)
         {
@@ -284,5 +257,6 @@ namespace TrakstarGUI
         {
 
         }
+
     }
 }

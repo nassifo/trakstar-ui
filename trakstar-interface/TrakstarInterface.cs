@@ -50,99 +50,102 @@ namespace TrakstarInterface
         #region Public Methods
         public Trakstar(double sampling_frequency = 100.0f)
         {
-            string error_message = string.Empty;
-
             // Set sampling frequency (default 100Hz)
             samplingFrequency = sampling_frequency;
 
             // Divider so we only get the data points corresponding to new samples
             decimationRate = 3;
-
-            #region Initialize hardware
-            // Initialize the BIRD system
-            int errorCode = InitializeBIRDSystem();
-            if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
-            {
-                error_message = errorHandler(errorCode);
-                throw new Exception(error_message);
-            }
-
-            // Retrieve Trakstar hardware configuration (such as number of sensors, xmtrs, etc)
-            errorCode = GetBIRDSystemConfiguration(out tracker);
-            if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
-            {
-                error_message = errorHandler(errorCode);
-                throw new Exception(error_message);
-            }
-
-            // Retrieve sensor information (such as sensor ID, serial number, etc)
-            pSensor = new SENSOR_CONFIGURATION[tracker.numberSensors];
-            for (ushort i = 0; i < tracker.numberSensors; i++)
-            {
-                errorCode = GetSensorConfiguration(i, out pSensor[i]);
-                if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
-                {
-                    error_message = errorHandler(errorCode);
-                    throw new Exception(error_message);
-                }
-            }
-
-            // Retrieve Xmtr configuration (such as serial number, etc)
-            pXmtr = new TRANSMITTER_CONFIGURATION[tracker.numberTransmitters];
-            for (ushort i = 0; i < tracker.numberTransmitters; i++)
-            {
-                errorCode = GetTransmitterConfiguration(i, out pXmtr[i]);
-                if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
-                {
-                    error_message = errorHandler(errorCode);
-                    throw new Exception(error_message);
-                }
-              
-            }
-            #endregion
-
-            #region Set System Parameters
-            double _samplingFrequency = samplingFrequency;
-            errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.MEASUREMENT_RATE, ref _samplingFrequency, Marshal.SizeOf(samplingFrequency));
-            if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
-
-            byte _decimationRate = decimationRate;
-            // Set decimation rate 
-            errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.REPORT_RATE, ref _decimationRate, 2 * Marshal.SizeOf(decimationRate));
-            if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
-
-            // Search for the first attached transmitter and turn it on
-            for (short id = 0; id < tracker.numberTransmitters; id++)
-            {
-                if (pXmtr[id].attached == 1)
-                {
-                    errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.SELECT_TRANSMITTER, ref id, Marshal.SizeOf(id));
-                    if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
-                    break;
-                }
-            }
-            #endregion
-
-            #region Set Sensor Parameters
-            for (ushort i = 0; i < tracker.numberSensors; i++)
-            {
-                DATA_FORMAT_TYPE type = DATA_FORMAT_TYPE.DOUBLE_POSITION_ANGLES_TIME_Q;
-                errorCode = SetSensorParameter(i, SENSOR_PARAMETER_TYPE.DATA_FORMAT, ref type, Marshal.SizeOf((int)type));
-                if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
-            }
-            #endregion
         }
 
-        public Trakstar(string s)
+        public async Task InitSystem()
         {
-            // Blank test constructor
-            samplingFrequency = 100.0f;
+            await Task.Factory.StartNew(() =>
+            {
+                string error_message = String.Empty;
+
+                #region Initialize hardware
+                // Initialize the BIRD system
+                int errorCode = InitializeBIRDSystem();
+                if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
+                {
+                    error_message = errorHandler(errorCode);
+                    throw new Exception(error_message);
+                }
+
+                // Retrieve Trakstar hardware configuration (such as number of sensors, xmtrs, etc)
+                errorCode = GetBIRDSystemConfiguration(out tracker);
+                if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
+                {
+                    error_message = errorHandler(errorCode);
+                    throw new Exception(error_message);
+                }
+
+                // Retrieve sensor information (such as sensor ID, serial number, etc)
+                pSensor = new SENSOR_CONFIGURATION[tracker.numberSensors];
+                for (ushort i = 0; i < tracker.numberSensors; i++)
+                {
+                    errorCode = GetSensorConfiguration(i, out pSensor[i]);
+                    if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
+                    {
+                        error_message = errorHandler(errorCode);
+                        throw new Exception(error_message);
+                    }
+                }
+
+                // Retrieve Xmtr configuration (such as serial number, etc)
+                pXmtr = new TRANSMITTER_CONFIGURATION[tracker.numberTransmitters];
+                for (ushort i = 0; i < tracker.numberTransmitters; i++)
+                {
+                    errorCode = GetTransmitterConfiguration(i, out pXmtr[i]);
+                    if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
+                    {
+                        error_message = errorHandler(errorCode);
+                        throw new Exception(error_message);
+                    }
+
+                }
+                #endregion
+
+                #region Set System Parameters
+                double _samplingFrequency = samplingFrequency;
+                errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.MEASUREMENT_RATE, ref _samplingFrequency, Marshal.SizeOf(samplingFrequency));
+                if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+
+                byte _decimationRate = decimationRate;
+                // Set decimation rate 
+                errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.REPORT_RATE, ref _decimationRate, 2 * Marshal.SizeOf(decimationRate));
+                if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+
+                // Search for the first attached transmitter and turn it on
+                for (short id = 0; id < tracker.numberTransmitters; id++)
+                {
+                    if (pXmtr[id].attached == 1)
+                    {
+                        errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.SELECT_TRANSMITTER, ref id, Marshal.SizeOf(id));
+                        if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+                        break;
+                    }
+                }
+                #endregion
+
+                #region Set Sensor Parameters
+                for (ushort i = 0; i < tracker.numberSensors; i++)
+                {
+                    DATA_FORMAT_TYPE type = DATA_FORMAT_TYPE.DOUBLE_POSITION_ANGLES_TIME_Q;
+                    errorCode = SetSensorParameter(i, SENSOR_PARAMETER_TYPE.DATA_FORMAT, ref type, Marshal.SizeOf((int)type));
+                    if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+                }
+                #endregion
+            });
+
+            _IsActive = true;
         }
 
         // Turns off the Xmtr
         public void TrakstarOff()
         {
             string error_message;
+
             // Turn off the transmitter using code -1
             short xMtrOff = -1;
             int errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.SELECT_TRANSMITTER, ref xMtrOff, Marshal.SizeOf(xMtrOff));
@@ -150,9 +153,11 @@ namespace TrakstarInterface
                 error_message = errorHandler(errorCode);
                 throw new Exception(error_message);
             }
+
+            if (_IsActive) _IsActive = false;
         }
 
-        // Get Data Sync
+        // Get Data array from trakstar
         public DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] FetchData()
         {
             string error_message;
@@ -164,10 +169,12 @@ namespace TrakstarInterface
                 error_message = errorHandler(errorCode);
                 throw new Exception(error_message);
             }
+
             return records;
         }
 
-        // Get Data Async
+        // Get Data Async (OBSOLETE)
+        [Obsolete]
         public async Task<DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[]> FetchDataAsync()
         {
             return await Task.Factory.StartNew(() => FetchData());
@@ -185,38 +192,10 @@ namespace TrakstarInterface
             return tracker.numberSensors;
         }
 
-        // There is probably a better way of doing this.. but this will do for now
-        public double getCoordinateFromRecords(DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records, int sensorId, int coordinate)
+        public bool IsActive()
         {
-            double val = 0;
-
-            if (sensorId < records.Length)
-            {
-                switch (coordinate)
-                {
-                    case 0:
-                        val = records[sensorId].x; break;
-                    case 1:
-                        val = records[sensorId].y; break;
-                    case 2:
-                        val = records[sensorId].z; break;
-                    case 3:
-                        val = records[sensorId].a; break;
-                    case 4:
-                        val = records[sensorId].e; break;
-                    case 5:
-                        val = records[sensorId].r; break;
-                    default:
-                        val = 0.0; break;
-                }
-            } else
-            {
-                throw new Exception("Coordinate not defined.");
-            }
-
-            return val;
+            return _IsActive;
         }
-
         #endregion
 
         #region Private Members
@@ -225,6 +204,8 @@ namespace TrakstarInterface
         private SENSOR_CONFIGURATION[] pSensor;
 
         private TRANSMITTER_CONFIGURATION[] pXmtr;
+
+        private bool _IsActive = false;
         #endregion
 
         #region Public Members
