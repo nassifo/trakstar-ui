@@ -178,39 +178,27 @@ namespace trakstar_gui_3d
         //
         private void drawChart(WPFChartViewer viewer)
         {
-            // Create a ThreeDScatterChart object of size 720 x 600 pixels
-            ThreeDScatterChart c = new ThreeDScatterChart((int)(0.8 * TrakstarUIWindow.ActualWidth), (int)(0.8 * TrakstarUIWindow.ActualHeight));
+            // Create a ThreeDScatterChart object
+            ThreeDScatterChart c = new ThreeDScatterChart((int)(TrakstarUIWindow.ActualWidth - 200), (int)(TrakstarUIWindow.ActualHeight - LogWindow.ActualHeight - 30));
 
-            // Add a title to the chart using 20 points Times New Roman Italic font
-            c.addTitle("3D Scatter Chart (1)  ", "Times New Roman Italic", 20);
-
-            // Set the center of the plot region at (350, 280), and set width x depth
-            // x height to 360 x 360 x 270 pixels
-            c.setPlotRegion((int)(0.5 * TrakstarUIWindow.ActualWidth), (int)(0.4 * TrakstarUIWindow.ActualHeight), 360, 360, 270);
-
-            // Add a scatter group to the chart using 11 pixels glass sphere symbols,
-            // in which the color depends on the z value of the symbol
+            c.setPlotRegion(c.getWidth()/2, c.getHeight()/2 - 50, 500, 500, 200);
+            c.setViewAngle(90);
+            
+            // Add data into scatter plot
             foreach (var sensorData in dataBufferList)
             {
                 if (sensorData.id == 0)
-                c.addScatterGroup(sensorData.xBuffer, sensorData.yBuffer, sensorData.zBuffer, "", Chart.CircleShape, 11,
-                Chart.SameAsMainColor);
+                    c.addScatterGroup(sensorData.xBuffer, sensorData.yBuffer, sensorData.zBuffer, "", Chart.CircleShape, 10, -1);
             }
-
-            // Add a color axis (the legend) in which the left center is anchored at
-            // (645, 270). Set the length to 200 pixels and the labels on the right
-            // side.
-            c.setColorAxis(50, 10, Chart.Left, 20, Chart.Right);
 
             // Set the x, y and z axis titles using 10 points Arial Bold font
             c.xAxis().setTitle("X-Axis Place Holder", "Arial Bold", 10);
             c.yAxis().setTitle("Y-Axis Place Holder", "Arial Bold", 10);
             c.zAxis().setTitle("Z-Axis Place Holder", "Arial Bold", 10);
 
-            c.zAxis().setLinearScale(-35, 35, 5);
-            c.xAxis().setLinearScale(-35, 35, 5);
-            c.yAxis().setLinearScale(0, 35, 5);
-
+            c.zAxis().setLinearScale(-40, 40, 5);
+            c.xAxis().setLinearScale(-40, 40, 5);
+            c.yAxis().setLinearScale(-40, 40, 5);
 
             // Assign the chart to the WinChartViewer
             viewer.Chart = c;
@@ -244,7 +232,7 @@ namespace trakstar_gui_3d
         public void LogMessageToWindow(string text)
         {
             LogWindow.AppendText(text);
-            LogWindow.AppendText("\u2028"); // Linebreak, not paragraph break
+            LogWindow.AppendText("\u2028");
             LogWindow.ScrollToEnd();
         }
 

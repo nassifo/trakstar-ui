@@ -13,6 +13,7 @@
         Icon="favicon.ico" Closing="Window_Closing"
         >
     <Grid>
+        <!-- Grid definitions -->
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="7*"/>
@@ -23,6 +24,8 @@
             <ColumnDefinition Width="9*"/>
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
+        
+        <!-- Menu items -->
         <Menu Grid.Column="0" Grid.ColumnSpan="2" Grid.Row="0" Margin="2">
             <MenuItem Header="_File">
                 <MenuItem Header="_Open" />
@@ -33,64 +36,53 @@
                 <MenuItem Header="Info" Click="Edit_Info_Click"/>
             </MenuItem>
         </Menu>
-        <ChartDirector:WPFChartViewer x:Name="SensorDataChart" Margin="5" ViewPortChanged="SensorDataChart_ViewPortChanged" Grid.Column="0" Grid.Row="1" />
-        <StackPanel Width="200" Background="#FFF0F0F0" Grid.Row="1" Grid.Column="1" Margin="5" Orientation="Vertical">
-            <RadioButton x:Name="runPB" Style="{StaticResource {x:Type ToggleButton}}" HorizontalContentAlignment="Center" 
-                         Checked="runPB_CheckedChanged" Unchecked="runPB_CheckedChanged" Margin="37,10,37,5">
-                <StackPanel Orientation="Horizontal" Margin="5">
-                    <TextBlock Text="Run" FontWeight="Bold"/>
-                </StackPanel>
-            </RadioButton>
-            <RadioButton x:Name="freezePB" Style="{StaticResource {x:Type ToggleButton}}" HorizontalContentAlignment="Center" Margin="37,5,37,5" >
-                <StackPanel Orientation="Horizontal" Margin="5">
-                    <TextBlock Text="Pause" FontWeight="Bold"/>
-                </StackPanel>
-            </RadioButton>
-            <TextBlock Text="Sampling Rate (milliseconds)" Margin="5,30,0,0" FontWeight="Bold" />
-            <ComboBox x:Name="samplePeriod" Margin="3" SelectionChanged="samplePeriod_SelectionChanged">
-                <ComboBoxItem IsSelected="True">10</ComboBoxItem>
-                <ComboBoxItem>17</ComboBoxItem>
-            </ComboBox>
-            <TextBlock Text="Show on plot" Margin="3,30,0,1" FontWeight="Bold"/>
-            <Label>Sensor 1</Label>
-            <StackPanel Orientation="Horizontal">
-                <CheckBox Margin="5">
-                    X
-                </CheckBox>
-                <CheckBox Margin="5">
-                    Y
-                </CheckBox>
-            </StackPanel>
-            <Label>Sensor 2</Label>
-            <StackPanel Orientation="Horizontal">
-                <CheckBox Margin="5">
-                    X
-                </CheckBox>
-                <CheckBox Margin="5">
-                    Y
-                </CheckBox>
-            </StackPanel>
-
-            <TextBlock Text="Save data to..." Margin="3,30,0,1" FontWeight="Bold"/>
-
-                <TextBlock IsHitTestVisible="False" Text="Enter Search Term Here" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0,0,0" Foreground="DarkGray">
-                    <TextBlock.Style>
-                        <Style TargetType="{x:Type TextBlock}">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Text, ElementName=SearchTermTextBox}" Value="">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            
-            <Button Name="CSVSaveButton" Margin="37,10,37,5" Click="CSVSaveButton_Click">Select directory</Button>
-        </StackPanel>
-
-        <GridSplitter Grid.Row="2" Height="8" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Stretch"/>
         
+        <!-- Chart control -->
+        <ChartDirector:WPFChartViewer x:Name="SensorDataChart" Margin="5" ViewPortChanged="SensorDataChart_ViewPortChanged" Grid.Column="0" Grid.Row="1" />
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Row="1" Grid.Column="1">
+            <!-- Side bar controls stack panel -->
+            <StackPanel Width="200" Background="#FFF0F0F0"  Margin="5" Orientation="Vertical">
+                <Label Tag="Trakstar Controls" FontWeight="Bold" FontSize="25" Margin="5" HorizontalAlignment="Right" />
+
+                <!-- Start and Stop Buttons for controlling file IO -->
+                <Button Name="StartButton" Margin="37,10,37,5" IsEnabled="False" Click="StartButton_Click">Start Recording</Button>
+                <Button Name="StopButton" Margin="37,10,37,5" IsEnabled="False" Click="StopButton_Click">Stop Recording</Button>
+
+                <TextBlock Name="Timer" Visibility="Hidden" Margin="8" Foreground="Red" Text="" FontSize="24" HorizontalAlignment="Center" />
+
+                <!-- Choosing output file -->
+                <TextBlock Text="Choose output file..." Margin="5" FontWeight="Bold"/>
+                <Button Name="CSVSaveButton" Margin="37,10,37,5" Click="CSVSaveButton_Click">Save As</Button>
+                <TextBlock Name="outputFileLabel" Text="No file chosen" HorizontalAlignment="Center" Margin="5"/>
+
+                <!-- Box to show sensor coordinates -->
+                <TextBlock Text="Select Sensor Coordinate To Plot: " Margin="3,30,0,1" FontWeight="Bold"/>
+                <ListBox ItemsSource="{DynamicResource SensorList}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox Text="{Binding DisplayName}"/>
+                                <CheckBox Margin="5" IsChecked="{Binding IsSelectedX, Mode=TwoWay}">X</CheckBox>
+                                <CheckBox Margin="5" IsChecked="{Binding IsSelectedY, Mode=TwoWay}">Y</CheckBox>
+                                <CheckBox Margin="5" IsChecked="{Binding IsSelectedZ, Mode=TwoWay}">Z</CheckBox>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+
+                <!-- Choosing the window refresh rate (probably dont need this anymore) -->
+                <TextBlock Text="Sampling Rate (milliseconds)" Margin="5,30,0,0" FontWeight="Bold" />
+                <ComboBox x:Name="samplePeriod" Margin="3" SelectionChanged="samplePeriod_SelectionChanged">
+                    <ComboBoxItem IsSelected="True">10</ComboBoxItem>
+                    <ComboBoxItem>17</ComboBoxItem>
+                </ComboBox>
+            </StackPanel>
+        </ScrollViewer>
+        
+        <!-- Logging window -->
+        <GridSplitter Grid.Row="2" Height="8" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Stretch"/>
         <RichTextBox IsEnabled="True" IsReadOnly="True" Name="LogWindow" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
             <FlowDocument/>
         </RichTextBox>

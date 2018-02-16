@@ -223,6 +223,13 @@ namespace TrakstarInterface
         {
             get; set;
         }
+
+        public uint getSensorSerialNumberByIndex(int index)
+        {
+            if (index < pSensor.Length) return pSensor[index].serialNumber;
+
+            return 0;
+        }
         #endregion
 
         #region Private Methods

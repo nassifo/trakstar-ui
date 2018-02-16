@@ -10,15 +10,18 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Timers;
 using System.Threading;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Collections.ObjectModel;
 
 namespace TrakstarGUI
 {
     public partial class TrakstarWindow : Window
     {
-        private const int bufferSize = 500;
+        private const int bufferSize = 300;
         private DateTime[] timeStamps = new DateTime[bufferSize];
 
-        private List<SensorBuffer> dataBufferList = new List<SensorBuffer>();
+        ObservableCollection<Sensor> SensorList = new ObservableCollection<Sensor>();
 
         // Instance of the Trakstar
         private Trakstar bird;
@@ -27,16 +30,29 @@ namespace TrakstarGUI
         private DispatcherTimer chartUpdateTimer = new DispatcherTimer(DispatcherPriority.Render);
         private TimeSpan dataUpdateInterval;
 
+        // The timer used to keep track of how long we have been recording for
+        private DispatcherTimer RecordingTimer = new DispatcherTimer(DispatcherPriority.Background);
+        private DateTime RecordingTimerStart;
+
+        // Token for Task
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         CancellationToken token;
 
+        // Properties for file I/O
+        private String outputFileName = String.Empty; // Current output file name
+        private String prevOutputFileName = String.Empty; // Keep track of the previous output file name
+        private bool readyToWriteToOutput = false;
+        private bool writeToOutputFlag = false;
+        private FileStream s;
+        private StreamWriter outputFile;
+
         public TrakstarWindow()
         {
-            InitializeComponent();   
+            InitializeComponent();
         }
         
         private async void Window_Loaded(object sender, RoutedEventArgs e)
-        {
+        {       
             bird = new Trakstar();
 
             LogMessageToWindow("Loading Trakstar system...");
@@ -47,89 +63,77 @@ namespace TrakstarGUI
             }
             catch (Exception ex)
             {
-                LogMessageToWindow(ex.ToString()); return;
+                LogMessageToWindow(ex.Message.ToString()); return;
             }
 
-            LogMessageToWindow("Trakstar loaded successfully! Press Run to start recording.");
+            LogMessageToWindow("Trakstar loaded successfully! Press Start to start recording.");
 
             // Chart update rate, which can be different from the data generation rate.
             chartUpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, int.Parse(samplePeriod.Text));
             chartUpdateTimer.Tick += chartUpdateTimer_Tick;
+            chartUpdateTimer.IsEnabled = true;
 
+            // For XYChart X-Axis
             dataUpdateInterval = new TimeSpan(0, 0, 0, 0, bird.GetSamplingRate());
 
-            // Initialize data buffer to no data.
+            // Definitions for the recording timer
+            RecordingTimer.Interval = new TimeSpan(0, 0, 0, 0, 50);
+            RecordingTimer.Tick += RecordingTimer_Tick;
+
+            // Initialize time stamps
             for (int i = 0; i < timeStamps.Length; ++i)
                 timeStamps[i] = DateTime.MinValue;
 
             // Initialize buffer list
             for (int i = 0; i < bird.GetNumberOfSensors(); i++)
             {
-                SensorBuffer sensorBuffer = new SensorBuffer();
+                Sensor sensor = new Sensor();
 
-                sensorBuffer.id = i;
+                sensor.id = i;
+                sensor.DisplayName = "Sensor " + i;
+                sensor.xBuffer = new double[bufferSize];
+                sensor.yBuffer = new double[bufferSize];
+                sensor.zBuffer = new double[bufferSize];
 
-                sensorBuffer.xBuffer = new double[bufferSize];
-                sensorBuffer.yBuffer = new double[bufferSize];
-                sensorBuffer.zBuffer = new double[bufferSize];
+                sensor.IsSelectedX = false;
+                sensor.IsSelectedY = false;
+                sensor.IsSelectedZ = false;
 
-                dataBufferList.Add(sensorBuffer);
+                SensorList.Add(sensor);
             }
+
+            Resources["SensorList"] = SensorList;
 
             chartUpdateTimer.Start();
 
             token = cancellationTokenSource.Token;
+
+            StartButton.IsEnabled = true;
+
+            // Start data polling Task/Thread
+            var listener = Task.Factory.StartNew( () => DataPolling()
+            , token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             
-            var listener = Task.Factory.StartNew( () =>
-            {
-                FileStream s = new FileStream("records.csv", FileMode.Create, FileAccess.Write,
-                          FileShare.None, 4096,
-                          FileOptions.Asynchronous | FileOptions.SequentialScan);
+        }
 
-                StreamWriter outputFile = new StreamWriter(s);
+        private void RecordingTimer_Tick(object sender, EventArgs e)
+        {
 
-                while (true)
-                {
-                    DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records;
-                    
-                    try
-                    {
-                        // Get all the new data records for all sensors and all degrees of freedom (x,y,z,a,e,o)
-                        records = bird.FetchData();
-                    }
-                    catch (Exception ex)
-                    {
-                        LogMessageToWindow(ex.ToString()); continue;
-                    }
-
-                    // Write data to file
-                    for (int i = 0; i < records.Length; i++)
-                    {
-                        outputFile.Write(i + ", " + records[i].x + ", " + records[i].y + ", " + records[i].z + ", " + records[i].time + ", ");
-                    }
-
-                    outputFile.WriteLine();
-
-                    foreach (var dataBuffer in dataBufferList)
-                    {
-                        shiftData(dataBuffer.xBuffer, records[dataBuffer.id].x);
-                        shiftData(dataBuffer.yBuffer, records[dataBuffer.id].y);
-                        shiftData(dataBuffer.zBuffer, records[dataBuffer.id].z);
-                    }
-
-                    shiftData(timeStamps, DateTime.Now); 
-                    
-                    if (token.IsCancellationRequested) break;
-                }
-            }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            Timer.Text = (DateTime.Now - RecordingTimerStart).ToString(@"hh\:mm\:ss");
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (bird != null)
+            if (bird.IsActive())
             {
                 cancellationTokenSource.Cancel();
                 bird.TrakstarOff();
+
+                if (readyToWriteToOutput)
+                {
+                    outputFile.Close();
+                    s.Close();
+                }
             }
         }
 
@@ -142,14 +146,6 @@ namespace TrakstarGUI
             SensorDataChart.updateViewPort(true, false);
         }
 
-        //
-        // Enable/disable chart update based on the state of the Run button.
-        //
-        private void runPB_CheckedChanged(object sender, RoutedEventArgs e)
-        {
-            if (bird.IsActive()) 
-            chartUpdateTimer.IsEnabled = runPB.IsChecked == true;
-        }
 
         //
         // Updates the chartUpdateTimer interval if the user selects another interval.
@@ -167,7 +163,8 @@ namespace TrakstarGUI
         //
         private void SensorDataChart_ViewPortChanged(object sender, WPFViewPortEventArgs e)
         {
-            drawChart(sender as WPFChartViewer);
+            // If the trakstar is connected and active then draw chart
+            if (bird.IsActive()) drawChart(sender as WPFChartViewer);
         }
 
         //
@@ -183,10 +180,6 @@ namespace TrakstarGUI
             
             c.setClipping();
 
-            // Add a title to the chart
-            c.addTitle("Sensor position", "Times New Roman Bold Italic", 15
-                ).setBackground(0xdddddd, 0x000000, Chart.glassEffect());
-
             // Add a legend box at the top of the plot area with 9pts Arial Bold font. We set the 
             // legend box to the same width as the plot area and use grid layout (as opposed to 
             // flow or top/down layout). This distributes the 3 legend icons evenly on top of the 
@@ -199,13 +192,9 @@ namespace TrakstarGUI
             // Configure the y-axis with a 10pts Arial Bold axis title
             c.yAxis().setTitle("Position (Inches)", "Arial Bold", 10);
 
-            // Scale Y axis from minimum sensor position to maximum position (0 inch - 35 inch)
+            // Scale Y axis from minimum sensor position to maximum position (-35 inch to 35 inch)
             c.yAxis().setDateScale(-35, 35, 5);
-
-            // Configure the x-axis to auto-scale with at least 75 pixels between major tick and 15 
-            // pixels between minor ticks. This shows more minor grid lines on the chart.
-            c.xAxis().setTickDensity(75, 15);
-          
+   
             // Set the axes width to 2 pixels
             c.xAxis().setWidth(2);
             c.yAxis().setWidth(2);        
@@ -230,14 +219,16 @@ namespace TrakstarGUI
                 // Set line thickness
                 layer.setLineWidth(8);
 
-                foreach (var sensorData in dataBufferList)
+                foreach (var sensorData in SensorList)
                 {
-                    if (sensorData.id == 0)
-                    {
-                        layer.addDataSet(sensorData.xBuffer, -1, "sensor #: " + (sensorData.id + 1) + "<*bgColor=FFCCCC*>" + c.formatValue(sensorData.xBuffer[sensorData.xBuffer.Length - 1], " {value|2} "));
-                        layer.addDataSet(sensorData.yBuffer, -1, "sensor #: " + (sensorData.id + 1) + "<*bgColor=FFCCCC*>" + c.formatValue(sensorData.yBuffer[sensorData.yBuffer.Length - 1], " {value|2} "));
-                        layer.addDataSet(sensorData.zBuffer, -1, "sensor #: " + (sensorData.id + 1) + "<*bgColor=FFCCCC*>" + c.formatValue(sensorData.zBuffer[sensorData.zBuffer.Length - 1], " {value|2} "));
-                    }
+                    if (sensorData.IsSelectedX)
+                    layer.addDataSet(sensorData.xBuffer, -1, "sensor #: " + (sensorData.id + 1) + "<*bgColor=FFCCCC*>" + c.formatValue(sensorData.xBuffer[sensorData.xBuffer.Length - 1], " {value|2} "));
+                        
+                    if (sensorData.IsSelectedY)
+                    layer.addDataSet(sensorData.yBuffer, -1, "sensor #: " + (sensorData.id + 1) + "<*bgColor=FFCCCC*>" + c.formatValue(sensorData.yBuffer[sensorData.yBuffer.Length - 1], " {value|2} "));
+
+                    if (sensorData.IsSelectedZ)
+                    layer.addDataSet(sensorData.zBuffer, -1, "sensor #: " + (sensorData.id + 1) + "<*bgColor=FFCCCC*>" + c.formatValue(sensorData.zBuffer[sensorData.zBuffer.Length - 1], " {value|2} "));
                 }
             }
 
@@ -249,21 +240,37 @@ namespace TrakstarGUI
         // Utility to shift a DataTime value into an array
         //
         private void shiftData<T>(T[] data, T newValue)
-        {
-            /*   
-               for (int i = 1; i < data.Length; ++i)
-                   data[i - 1] = data[i];
-               data[data.Length - 1] = newValue;
-               */
-
-            Array.Copy(data, 1, data, 0, data.Length - 1);
-
+        {         
+            for (int i = 1; i < data.Length; ++i)
+                data[i - 1] = data[i];
             data[data.Length - 1] = newValue;
         }
 
-        public struct SensorBuffer
+        public class Sensor
         {
             public int id;
+
+            private string _displayName;
+            public string DisplayName {
+                get
+                {
+                    return _displayName;
+                }
+                set
+                {
+                    if (String.IsNullOrEmpty(value))
+                    {
+                        _displayName = "Sensor " + id.ToString();
+                    } else
+                    {
+                        _displayName = value;
+                    }
+                }
+            }
+
+            public bool IsSelectedX { get; set; }
+            public bool IsSelectedY { get; set; }
+            public bool IsSelectedZ { get; set; }
 
             public double[] xBuffer, yBuffer, zBuffer;
         }
@@ -275,14 +282,196 @@ namespace TrakstarGUI
             LogWindow.ScrollToEnd();
         }
 
+        private void DataPolling()
+        {
+            while (true)
+            {
+                DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records;
+
+                try
+                {
+                    // Get all the new data records for all sensors and all degrees of freedom (x,y,z,a,e,r)
+                    records = bird.FetchData();
+                }
+                catch (Exception ex)
+                {
+                    LogMessageToWindow(ex.Message.ToString()); continue;
+                }
+
+                foreach (var dataBuffer in SensorList)
+                {
+                    shiftData(dataBuffer.xBuffer, records[dataBuffer.id].x);
+                    shiftData(dataBuffer.yBuffer, records[dataBuffer.id].y);
+                    shiftData(dataBuffer.zBuffer, records[dataBuffer.id].z);
+                }
+
+                shiftData(timeStamps, DateTime.Now);
+
+                // Write data to file
+                if (writeToOutputFlag)
+                {
+                    for (int i = 0; i < records.Length; i++)
+                    {
+                        outputFile.Write(i + ", " + records[i].x + ", " + records[i].y + ", " + records[i].z + ", " + records[i].time + ", ");
+                    }
+
+                    outputFile.WriteLine();
+                }
+
+                if (token.IsCancellationRequested) break;
+            }
+        }
+
+        #region Button Click Events
         private void Edit_Info_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show("Created by Omar Nassif. Test message.", "Info Box");
         }
 
+
         private void CSVSaveButton_Click(object sender, RoutedEventArgs e)
         {
+            // Configure save file dialog box
+            Microsoft.Win32.SaveFileDialog dlg = new Microsoft.Win32.SaveFileDialog();
+            dlg.FileName = "Choose appropriate file name"; // Default file name
+            dlg.DefaultExt = ".csv"; // Default file extension
+            dlg.Filter = "CSV Files (.csv)|*.csv"; // Filter files by extension
 
+            // Show save file dialog box
+            Nullable<bool> result = dlg.ShowDialog();
+
+            // Process save file dialog box results
+            if (result == true)
+            {
+                if (File.Exists(dlg.FileName))
+                {
+                    // If the file already exists, confirm that they want to overwrite it
+                    MessageBoxResult messageBoxResult = System.Windows.MessageBox.Show("The file " + dlg.SafeFileName + " already exists at that location, do you want to overwrite it?"
+                        , "Overwrite Confirmation"
+                        , System.Windows.MessageBoxButton.YesNo);
+
+                    if (messageBoxResult == MessageBoxResult.Yes)
+                    {
+                        // Save document
+                        outputFileName = dlg.FileName;
+                        outputFileLabel.Text = "Saving as: " + dlg.SafeFileName;
+                        
+                    }
+                    else
+                    {
+                        outputFileName = String.Empty;
+                        outputFileLabel.Text = "No output file chosen";
+                        readyToWriteToOutput = false;
+                    }
+                }
+                else
+                {
+                    // Save document
+                    outputFileName = dlg.FileName;
+                    outputFileLabel.Text = "Saving as: " + dlg.SafeFileName;
+                }
+
+                // If there is a selected file name that means we can write to that file (or OVERWRITE)
+                if (!String.IsNullOrEmpty(outputFileName))
+                {
+                    // Create file and initialize StreamWriter object
+                    try
+                    {
+                        s = new FileStream(outputFileName, FileMode.Create, FileAccess.Write,
+                        FileShare.None, 4096,
+                        FileOptions.Asynchronous | FileOptions.SequentialScan);
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        LogMessageToWindow("You do not have permission to write to: " + outputFileName);
+                        LogMessageToWindow("Exception message: " + ex.Message);
+                    }
+                    catch(PathTooLongException ex)
+                    {
+                        LogMessageToWindow("The selected directory path is too long.");
+                        LogMessageToWindow("Exception message: " + ex.Message);
+                    }
+                    catch(DirectoryNotFoundException ex)
+                    {
+                        LogMessageToWindow("The selected output directory could not be found.");
+                        LogMessageToWindow("Exception message: " + ex.Message);
+                    }
+                    catch(IOException ex)
+                    {
+                        LogMessageToWindow("A writing error has occurred.");
+                        LogMessageToWindow("Exception message: " + ex.Message);
+                    }
+                    finally
+                    {
+                        if (s == null)
+                        {
+                            outputFileName = String.Empty;
+                            outputFileLabel.Text = "No output file chosen";
+                            readyToWriteToOutput = false;
+                        }
+                    }
+
+                    // Initialize the writing stream
+                    try
+                    {
+                        outputFile = new StreamWriter(s);
+                    }
+                    catch(ArgumentNullException ex)
+                    {
+                        LogMessageToWindow("Exception message: " + ex.Message);
+                        outputFileName = String.Empty;
+                        outputFileLabel.Text = "No output file chosen";
+                        readyToWriteToOutput = false;
+                        return;
+                    }
+
+                    // Flag to indicate we are ready to write to the file
+                    readyToWriteToOutput = true;                 
+                }
+            }
         }
+
+
+        private void StartButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (readyToWriteToOutput)
+            {
+                writeToOutputFlag = true;
+                StartButton.IsEnabled = false;
+                StopButton.IsEnabled = true;
+
+                // Enable Timer/Counter
+                Timer.Visibility = System.Windows.Visibility.Visible;
+                RecordingTimerStart = DateTime.Now;
+                RecordingTimer.Start();
+
+            } else
+            {
+                MessageBox.Show("Please select an output file first, by clicking on the Save As button.", "No output file selected");
+            }
+        }
+
+        private void StopButton_Click(object sender, RoutedEventArgs e)
+        {
+            writeToOutputFlag = false;
+            StartButton.IsEnabled = true;
+            StopButton.IsEnabled = false;
+
+            // Reset Save As parameters and close file stream?
+            outputFileName = String.Empty;
+            outputFileLabel.Text = "No output file chosen";
+            readyToWriteToOutput = false;
+
+            // Reset Timer
+            Timer.Visibility = System.Windows.Visibility.Hidden;
+            Timer.Text = "";
+            RecordingTimer.Stop();
+
+            outputFile.Close();
+            s.Close();
+        }
+        #endregion
+
+
     }
 }
