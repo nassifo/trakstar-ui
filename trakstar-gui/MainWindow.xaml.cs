@@ -5,7 +5,6 @@ using System.Windows.Controls;
 using ChartDirector;
 using TrakstarInterface;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
 using System.Threading.Tasks;
 using System.Timers;
@@ -13,22 +12,31 @@ using System.Threading;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
+using System.Collections.Specialized;
+using Newtonsoft.Json;
 
 namespace TrakstarGUI
 {
     public partial class TrakstarWindow : Window
     {
-        private const int bufferSize = 300;
-        private DateTime[] timeStamps = new DateTime[bufferSize];
+        // Chart related variables
+        private const int bufferSize = 50;
 
         ObservableCollection<Sensor> SensorList = new ObservableCollection<Sensor>();
+
+        private int chartElevationAngle;
+        private int chartRotationAngle;
+
+        private int chartXWidth;
+        private int chartYDepth;
+        private int chartZHeight;
 
         // Instance of the Trakstar
         private Trakstar bird;
 
         // Timer used to updated the chart
         private DispatcherTimer chartUpdateTimer = new DispatcherTimer(DispatcherPriority.Render);
-        private TimeSpan dataUpdateInterval;
 
         // The timer used to keep track of how long we have been recording for
         private DispatcherTimer RecordingTimer = new DispatcherTimer(DispatcherPriority.Background);
@@ -39,8 +47,7 @@ namespace TrakstarGUI
         CancellationToken token;
 
         // Properties for file I/O
-        private String outputFileName = String.Empty; // Current output file name
-        private String prevOutputFileName = String.Empty; // Keep track of the previous output file name
+        private String outputFileName = String.Empty;
         private bool readyToWriteToOutput = false;
         private bool writeToOutputFlag = false;
         private FileStream s;
@@ -52,10 +59,12 @@ namespace TrakstarGUI
         }
         
         private async void Window_Loaded(object sender, RoutedEventArgs e)
-        {       
-            bird = new Trakstar();
-
+        {
+            // Create instance of Trakstar device with selected sampling rate
+            bird = new Trakstar(double.Parse(sampleFrequency.Text));
+            
             LogMessageToWindow("Loading Trakstar system...");
+
             // Initialize Trakstar system
             try
             {
@@ -63,69 +72,117 @@ namespace TrakstarGUI
             }
             catch (Exception ex)
             {
-                LogMessageToWindow(ex.Message.ToString()); return;
-            }
-
-            LogMessageToWindow("Trakstar loaded successfully! Press Start to start recording.");
+                LogMessageToWindow(ex.Message.ToString());
+            } 
 
             // Chart update rate, which can be different from the data generation rate.
-            chartUpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, int.Parse(samplePeriod.Text));
+            chartUpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, 50);
             chartUpdateTimer.Tick += chartUpdateTimer_Tick;
             chartUpdateTimer.IsEnabled = true;
-
-            // For XYChart X-Axis
-            dataUpdateInterval = new TimeSpan(0, 0, 0, 0, bird.GetSamplingRate());
 
             // Definitions for the recording timer
             RecordingTimer.Interval = new TimeSpan(0, 0, 0, 0, 50);
             RecordingTimer.Tick += RecordingTimer_Tick;
 
-            // Initialize time stamps
-            for (int i = 0; i < timeStamps.Length; ++i)
-                timeStamps[i] = DateTime.MinValue;
+            // Begin chart update timer
+            chartUpdateTimer.Start();
 
-            // Initialize buffer list
-            for (int i = 0; i < bird.GetNumberOfSensors(); i++)
+            // If we have chart view settings from before, load them in
+            string _sensorNamesProperty = trakstar_gui.Properties.Settings.Default.SensorDisplayNames;
+
+            Dictionary<int, string> sensorNames = new Dictionary<int, string>(0);
+
+            if (!String.IsNullOrEmpty(_sensorNamesProperty))
             {
-                Sensor sensor = new Sensor();
-
-                sensor.id = i;
-                sensor.DisplayName = "Sensor " + i;
-                sensor.xBuffer = new double[bufferSize];
-                sensor.yBuffer = new double[bufferSize];
-                sensor.zBuffer = new double[bufferSize];
-
-                sensor.IsSelectedX = false;
-                sensor.IsSelectedY = false;
-                sensor.IsSelectedZ = false;
-
-                SensorList.Add(sensor);
+                sensorNames = JsonConvert.DeserializeObject<Dictionary<int, string>>(_sensorNamesProperty);
             }
 
-            Resources["SensorList"] = SensorList;
-
-            chartUpdateTimer.Start();
+            ElevationAngleControl.Value = trakstar_gui.Properties.Settings.Default.elevationAngle;
+            RotationAngleControl.Value = trakstar_gui.Properties.Settings.Default.rotationAngle;
+            XWidthControl.Value = trakstar_gui.Properties.Settings.Default.xwidth;
+            YDepthControl.Value = trakstar_gui.Properties.Settings.Default.ydepth;
+            ZHeightControl.Value = trakstar_gui.Properties.Settings.Default.zheight;
 
             token = cancellationTokenSource.Token;
 
-            StartButton.IsEnabled = true;
+            // If the trakstar is active, load sensor data and begin data polling
+            if (bird.IsActive())
+            {
+                LogMessageToWindow("Device setup successful! To begin recording, select an output file by clicking on Save As and then hit Start Recording");
 
-            // Start data polling Task/Thread
-            var listener = Task.Factory.StartNew( () => DataPolling()
-            , token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-            
+                // Initialize buffer list to contain sensor data
+                for (int i = 0; i < bird.GetNumberOfSensors(); i++)
+                {
+                    Sensor sensor = new Sensor();
+
+                    sensor.id = i;
+
+                    string _displayName;
+
+                    if (sensorNames.Count > 0)
+                    {
+                        if (!sensorNames.TryGetValue(sensor.id, out _displayName))
+                        {
+                            sensor.DisplayName = "Sensor " + (i + 1);
+                        }
+                        else
+                        {
+                            sensor.DisplayName = _displayName;
+                        }
+                    } 
+                    else
+                    {
+                        sensor.DisplayName = "Sensor " + (i + 1);
+                    }
+
+                    sensor.xBuffer = new double[bufferSize];
+                    sensor.yBuffer = new double[bufferSize];
+                    sensor.zBuffer = new double[bufferSize];
+                    
+                    sensor.PlotToggle = true;
+
+                    SensorList.Add(sensor);
+                }
+
+                Resources["SensorList"] = SensorList;
+                
+                // Enable start button because we can record now
+                StartButton.IsEnabled = true;
+               
+                // Start data polling Task/Thread
+                var listener = Task.Factory.StartNew(() => DataPolling()
+                , token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            }          
         }
 
         private void RecordingTimer_Tick(object sender, EventArgs e)
         {
-
-            Timer.Text = (DateTime.Now - RecordingTimerStart).ToString(@"hh\:mm\:ss");
+            RecordingTimerControl.Text = (DateTime.Now - RecordingTimerStart).ToString(@"hh\:mm\:ss");
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             if (bird.IsActive())
             {
+                Dictionary<int,string> sensorNames = new Dictionary<int, string>();
+
+                foreach(var sensor in SensorList)
+                {
+                    sensorNames.Add(sensor.id, sensor.DisplayName);
+                }
+
+                // Store sensor names
+                trakstar_gui.Properties.Settings.Default.SensorDisplayNames = JsonConvert.SerializeObject(sensorNames);
+
+                // Store set chart view configuration 
+                trakstar_gui.Properties.Settings.Default.elevationAngle = chartElevationAngle;
+                trakstar_gui.Properties.Settings.Default.rotationAngle = chartRotationAngle;
+                trakstar_gui.Properties.Settings.Default.xwidth = chartXWidth;
+                trakstar_gui.Properties.Settings.Default.ydepth = chartYDepth;
+                trakstar_gui.Properties.Settings.Default.zheight = chartZHeight;
+
+                trakstar_gui.Properties.Settings.Default.Save();
+
                 cancellationTokenSource.Cancel();
                 bird.TrakstarOff();
 
@@ -146,25 +203,12 @@ namespace TrakstarGUI
             SensorDataChart.updateViewPort(true, false);
         }
 
-
         //
-        // Updates the chartUpdateTimer interval if the user selects another interval.
-        //
-        private void samplePeriod_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            var selectedText = (samplePeriod.SelectedValue as ComboBoxItem).Content as string;
-            if (!string.IsNullOrEmpty(selectedText))
-                chartUpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, int.Parse(selectedText));
-        }
-
-        //
-        // The viewPortChanged event handler. In this example, it just updates the chart. If you
-        // have other controls to update, you may also put the update code here.
-        //
+        // The viewPortChanged event handler.
+        // 
         private void SensorDataChart_ViewPortChanged(object sender, WPFViewPortEventArgs e)
         {
-            // If the trakstar is connected and active then draw chart
-            if (bird.IsActive()) drawChart(sender as WPFChartViewer);
+            drawChart(sender as WPFChartViewer);
         }
 
         //
@@ -172,66 +216,39 @@ namespace TrakstarGUI
         //
         private void drawChart(WPFChartViewer viewer)
         {
-            // Create an XYChart object 600 x 270 pixels in size, with light grey (f4f4f4) 
-            // background, black (000000) border, 1 pixel raised effect, and with a rounded frame.
-            XYChart c = new XYChart((int) (0.8*TrakstarUIWindow.ActualWidth), (int) (0.8* TrakstarUIWindow.ActualHeight), 0xf4f4f4, 0x000000, 1);
+            // Create a ThreeDScatterChart object
+            ThreeDScatterChart c = new ThreeDScatterChart((int)(TrakstarUIWindow.ActualWidth - 200), (int)(TrakstarUIWindow.ActualHeight - LogWindow.ActualHeight - 30));
             
-            c.setPlotArea(55, 62, (int)(0.8*TrakstarUIWindow.ActualWidth), (int)(0.65*TrakstarUIWindow.ActualHeight), 0xffffff, -1, -1, 0xcccccc, 0xcccccc);
+            c.setPlotRegion(c.getWidth() / 2, c.getHeight() / 2 - 50, chartXWidth, chartYDepth, chartZHeight);
+            c.setViewAngle(chartElevationAngle, chartRotationAngle);
+            c.addLegend(0, 0);
             
-            c.setClipping();
-
-            // Add a legend box at the top of the plot area with 9pts Arial Bold font. We set the 
-            // legend box to the same width as the plot area and use grid layout (as opposed to 
-            // flow or top/down layout). This distributes the 3 legend icons evenly on top of the 
-            // plot area.
-            LegendBox b = c.addLegend2( (c.getWidth()-130), 60, 1, "Arial Bold", 9);
-            
-            b.setBackground(Chart.Transparent, Chart.Transparent);
-            b.setWidth((int)(0.7 * TrakstarUIWindow.ActualWidth));
-
-            // Configure the y-axis with a 10pts Arial Bold axis title
-            c.yAxis().setTitle("Position (Inches)", "Arial Bold", 10);
-
-            // Scale Y axis from minimum sensor position to maximum position (-35 inch to 35 inch)
-            c.yAxis().setDateScale(-35, 35, 5);
-   
-            // Set the axes width to 2 pixels
-            c.xAxis().setWidth(2);
-            c.yAxis().setWidth(2);        
-
-            // Now we add the data to the chart
-            DateTime lastTime = timeStamps[timeStamps.Length - 1];
-            if (lastTime != DateTime.MinValue)
+            // Add sensor data into plot
+            foreach (var sensorData in SensorList)
             {
-                // Set up the x-axis scale
-                c.xAxis().setDateScale(lastTime.AddSeconds(
-                    -(dataUpdateInterval.TotalSeconds) * timeStamps.Length), lastTime);
-                   
-                // Set the x-axis label format
-                c.xAxis().setLabelFormat("{value|hh:nn:ss}");
-                
-                // Create a line layer to plot the lines
-                LineLayer layer = c.addLineLayer2();
+                string LegendText = sensorData.DisplayName;
 
-                // The x-coordinates are the timeStamps.
-                layer.setXData(timeStamps);
-
-                // Set line thickness
-                layer.setLineWidth(8);
-
-                foreach (var sensorData in SensorList)
+                if (sensorData.currentXCoord > 660 || sensorData.currentXCoord < 200 || sensorData.currentYCoord > 500 || sensorData.currentYCoord < -500 || sensorData.currentZCoord > 20 || sensorData.currentZCoord < -300)
                 {
-                    if (sensorData.IsSelectedX)
-                    layer.addDataSet(sensorData.xBuffer, -1, "sensor #: " + (sensorData.id + 1) + "<*bgColor=FFCCCC*>" + c.formatValue(sensorData.xBuffer[sensorData.xBuffer.Length - 1], " {value|2} "));
-                        
-                    if (sensorData.IsSelectedY)
-                    layer.addDataSet(sensorData.yBuffer, -1, "sensor #: " + (sensorData.id + 1) + "<*bgColor=FFCCCC*>" + c.formatValue(sensorData.yBuffer[sensorData.yBuffer.Length - 1], " {value|2} "));
-
-                    if (sensorData.IsSelectedZ)
-                    layer.addDataSet(sensorData.zBuffer, -1, "sensor #: " + (sensorData.id + 1) + "<*bgColor=FFCCCC*>" + c.formatValue(sensorData.zBuffer[sensorData.zBuffer.Length - 1], " {value|2} "));
+                    LegendText += "<*color=FF0000*> - OUT OF OPTIMAL RANGE";
                 }
+
+                if (sensorData.PlotToggle)
+                    c.addScatterGroup(sensorData.xBuffer, sensorData.yBuffer, sensorData.zBuffer, LegendText, Chart.CircleShape, 10, -1);             
             }
 
+            // Set the x, y and z axis titles
+            c.xAxis().setTitle("X-Axis", "Arial Bold", 12);
+            c.yAxis().setTitle("Y-Axis", "Arial Bold", 12);
+            c.zAxis().setTitle("Z-Axis", "Arial Bold", 12);
+
+            c.zAxis().setReverse();
+
+            c.xAxis().setLinearScale(200, 660, 20);
+            c.yAxis().setLinearScale(-500, 500, 50);
+            c.zAxis().setLinearScale(-300, 20, 20);
+
+            
             // Assign the chart to the WinChartViewer
             viewer.Chart = c;
         }
@@ -244,6 +261,14 @@ namespace TrakstarGUI
             for (int i = 1; i < data.Length; ++i)
                 data[i - 1] = data[i];
             data[data.Length - 1] = newValue;
+        }
+        private double MillisecondToHz(double period)
+        {
+            return (1 / (period / 1000));
+        }
+        private double HzToMillisecond(double frequency)
+        {
+            return ((1 / frequency) * 1000);
         }
 
         public class Sensor
@@ -258,21 +283,24 @@ namespace TrakstarGUI
                 }
                 set
                 {
-                    if (String.IsNullOrEmpty(value))
+                    var regexItem = new Regex("^[a-zA-Z0-9 ]*$");
+
+                    if (String.IsNullOrEmpty(value) || !regexItem.IsMatch(value))
                     {
-                        _displayName = "Sensor " + id.ToString();
-                    } else
+                        _displayName = "Sensor " + (id + 1);
+                    }
+                    else
                     {
                         _displayName = value;
                     }
                 }
             }
 
-            public bool IsSelectedX { get; set; }
-            public bool IsSelectedY { get; set; }
-            public bool IsSelectedZ { get; set; }
+            public bool PlotToggle { get; set; }
 
             public double[] xBuffer, yBuffer, zBuffer;
+
+            public double currentXCoord, currentYCoord, currentZCoord;
         }
 
         public void LogMessageToWindow(string text)
@@ -295,24 +323,36 @@ namespace TrakstarGUI
                 }
                 catch (Exception ex)
                 {
-                    LogMessageToWindow(ex.Message.ToString()); continue;
+                    LogMessageToWindow(ex.Message.ToString());  continue;
                 }
 
                 foreach (var dataBuffer in SensorList)
                 {
+                    // Store the newest coordinate for chart detection
+                    dataBuffer.currentXCoord = records[dataBuffer.id].x;
+                    dataBuffer.currentYCoord = records[dataBuffer.id].y;
+                    dataBuffer.currentZCoord = records[dataBuffer.id].z;
+
+                    // Shift new data into plot buffer
                     shiftData(dataBuffer.xBuffer, records[dataBuffer.id].x);
                     shiftData(dataBuffer.yBuffer, records[dataBuffer.id].y);
                     shiftData(dataBuffer.zBuffer, records[dataBuffer.id].z);
                 }
-
-                shiftData(timeStamps, DateTime.Now);
+                
 
                 // Write data to file
                 if (writeToOutputFlag)
                 {
                     for (int i = 0; i < records.Length; i++)
                     {
-                        outputFile.Write(i + ", " + records[i].x + ", " + records[i].y + ", " + records[i].z + ", " + records[i].time + ", ");
+                        // Write the time once
+                        if (i == 0)
+                        {
+                            // TODO: Writing 'status' and 'button' from bird class instead of hard coding
+                            outputFile.Write(records[i].time + ",S_00000000,B_00000000,"); 
+                        }
+
+                        outputFile.Write(records[i].x + "," + records[i].y + "," + records[i].z + "," + records[i].a + "," + records[i].e + "," + records[i].r + "," + records[i].quality + ",");
                     }
 
                     outputFile.WriteLine();
@@ -327,7 +367,6 @@ namespace TrakstarGUI
         {
             MessageBox.Show("Created by Omar Nassif. Test message.", "Info Box");
         }
-
 
         private void CSVSaveButton_Click(object sender, RoutedEventArgs e)
         {
@@ -346,7 +385,7 @@ namespace TrakstarGUI
                 if (File.Exists(dlg.FileName))
                 {
                     // If the file already exists, confirm that they want to overwrite it
-                    MessageBoxResult messageBoxResult = System.Windows.MessageBox.Show("The file " + dlg.SafeFileName + " already exists at that location, do you want to overwrite it?"
+                    MessageBoxResult messageBoxResult = System.Windows.MessageBox.Show("The file " + dlg.SafeFileName + " already exists at that location, are you sure you want to overwrite it?"
                         , "Overwrite Confirmation"
                         , System.Windows.MessageBoxButton.YesNo);
 
@@ -385,21 +424,25 @@ namespace TrakstarGUI
                     {
                         LogMessageToWindow("You do not have permission to write to: " + outputFileName);
                         LogMessageToWindow("Exception message: " + ex.Message);
+                        return;
                     }
                     catch(PathTooLongException ex)
                     {
                         LogMessageToWindow("The selected directory path is too long.");
                         LogMessageToWindow("Exception message: " + ex.Message);
+                        return;
                     }
                     catch(DirectoryNotFoundException ex)
                     {
                         LogMessageToWindow("The selected output directory could not be found.");
                         LogMessageToWindow("Exception message: " + ex.Message);
+                        return;
                     }
                     catch(IOException ex)
                     {
                         LogMessageToWindow("A writing error has occurred.");
                         LogMessageToWindow("Exception message: " + ex.Message);
+                        return;
                     }
                     finally
                     {
@@ -431,19 +474,28 @@ namespace TrakstarGUI
             }
         }
 
-
         private void StartButton_Click(object sender, RoutedEventArgs e)
         {
             if (readyToWriteToOutput)
             {
+                String headerLine = "timestamp,status,button,";
+
+                for (int i = 1; i < 9; i++)
+                {
+                    headerLine += ("x" + i + "," + "y" + i + "," + "z" + i + "," + "a" + i + "," + "e" + i + "," + "r" + i + "," + "q" + i + ",");
+                }
+
+                outputFile.WriteLine(headerLine);
+
                 writeToOutputFlag = true;
                 StartButton.IsEnabled = false;
                 StopButton.IsEnabled = true;
 
                 // Enable Timer/Counter
-                Timer.Visibility = System.Windows.Visibility.Visible;
+                RecordingTimerControl.Visibility = System.Windows.Visibility.Visible;
                 RecordingTimerStart = DateTime.Now;
                 RecordingTimer.Start();
+                LogMessageToWindow("Recording session started!");
 
             } else
             {
@@ -453,6 +505,9 @@ namespace TrakstarGUI
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
+            LogMessageToWindow("Stopping Recording Session!");
+            LogMessageToWindow("Data saved to: " + outputFileName);
+           
             writeToOutputFlag = false;
             StartButton.IsEnabled = true;
             StopButton.IsEnabled = false;
@@ -463,15 +518,85 @@ namespace TrakstarGUI
             readyToWriteToOutput = false;
 
             // Reset Timer
-            Timer.Visibility = System.Windows.Visibility.Hidden;
-            Timer.Text = "";
+            RecordingTimerControl.Visibility = System.Windows.Visibility.Hidden;
+            RecordingTimerControl.Text = "";
             RecordingTimer.Stop();
 
             outputFile.Close();
             s.Close();
         }
+
+        private void powerLineFrequency_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var selectedText = (powerLineFrequency.SelectedValue as ComboBoxItem).Content as string;
+
+            if (!string.IsNullOrEmpty(selectedText))
+            {
+                int error = bird.setPowerLineFrequency(double.Parse(selectedText));
+
+                if (error == -1)
+                {
+                    LogMessageToWindow("Could not change power line frequency.");
+                }
+                else
+                {
+                    LogMessageToWindow("Power line frequency settings changed to: " + selectedText);
+                }
+            }
+        }
+
+        private void sampleFrequency_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var selectedText = (sampleFrequency.SelectedValue as ComboBoxItem).Content as string;
+
+            if (!string.IsNullOrEmpty(selectedText))
+            {
+                chartUpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, int.Parse(selectedText));
+                
+                int error = bird.setSamplingFrequency(double.Parse(selectedText));
+
+                if (error == -1)
+                {
+                    LogMessageToWindow("Could not change sampling frequency.");
+                }
+                else
+                {
+                    LogMessageToWindow("Sampling frequency of Trakstar changed successfully to: " + selectedText);
+                }
+            }
+        }
         #endregion
 
+        #region Chart View Events
+        private void ElevationAngleControl_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (!String.IsNullOrEmpty(ElevationAngleControl.Text))
+            chartElevationAngle = int.Parse(ElevationAngleControl.Text);
+        }
 
+        private void RotationAngleControl_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (!String.IsNullOrEmpty(RotationAngleControl.Text))
+            chartRotationAngle = int.Parse(RotationAngleControl.Text);
+        }
+
+        private void ZHeightControl_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (!String.IsNullOrEmpty(ZHeightControl.Text))
+                chartZHeight = int.Parse(ZHeightControl.Text);
+        }
+
+        private void YDepthControl_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (!String.IsNullOrEmpty(YDepthControl.Text))
+                chartYDepth = int.Parse(YDepthControl.Text);
+        }
+
+        private void XWidthControl_ValueChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (!String.IsNullOrEmpty(XWidthControl.Text))
+                chartXWidth = int.Parse(XWidthControl.Text);
+        }
+        #endregion
     }
 }

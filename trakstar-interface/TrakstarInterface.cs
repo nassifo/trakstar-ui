@@ -33,8 +33,14 @@ namespace TrakstarInterface
         [DllImport("ATC3DG64.DLL", EntryPoint = "SetSystemParameter")]
         public static extern int SetSystemParameter(SYSTEM_PARAMETER_TYPE parameterType, ref byte val, int bufferSize);
 
+        [DllImport("ATC3DG64.DLL", EntryPoint = "SetSystemParameter")]
+        public static extern int SetSystemParameter(SYSTEM_PARAMETER_TYPE parameterType, ref bool val, int bufferSize);
+
         [DllImport("ATC3DG64.DLL", EntryPoint = "SetSensorParameter")]
         public static extern int SetSensorParameter(ushort sensorID, SENSOR_PARAMETER_TYPE parameterType, ref DATA_FORMAT_TYPE pBuffer, int bufferSize);
+
+        [DllImport("ATC3DG64.DLL", EntryPoint = "SetSensorParameter")]
+        public static extern int SetSensorParameter(ushort sensorID, SENSOR_PARAMETER_TYPE parameterType, ref HEMISPHERE_TYPE pBuffer, int bufferSize);
 
         [DllImport("ATC3DG64.DLL", CallingConvention = CallingConvention.Cdecl)]
         public static extern int GetSynchronousRecord(ushort sensorID, [Out] DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records, int recordSize);
@@ -48,12 +54,15 @@ namespace TrakstarInterface
         #endregion
 
         #region Public Methods
-        public Trakstar(double sampling_frequency = 100.0f)
+        public Trakstar(double sampling_frequency = 100.0f, double power_line_frequency = 60.0f)
         {
             // Set sampling frequency (default 100Hz)
             samplingFrequency = sampling_frequency;
 
-            // Divider so we only get the data points corresponding to new samples
+            // Set Power Line Frequency
+            powerLineFrequency = power_line_frequency;
+
+            // Divider so we only get the data points corresponding to new samples (see documentation)
             decimationRate = 3;
         }
 
@@ -107,13 +116,25 @@ namespace TrakstarInterface
                 #endregion
 
                 #region Set System Parameters
+
+                // Set sampling frequency of the device
                 double _samplingFrequency = samplingFrequency;
                 errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.MEASUREMENT_RATE, ref _samplingFrequency, Marshal.SizeOf(samplingFrequency));
                 if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
 
-                byte _decimationRate = decimationRate;
                 // Set decimation rate 
+                byte _decimationRate = decimationRate;
                 errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.REPORT_RATE, ref _decimationRate, 2 * Marshal.SizeOf(decimationRate));
+                if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+
+                // Set Power Line Frequency
+                double _powerLineFrequency = powerLineFrequency;
+                errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.POWER_LINE_FREQUENCY, ref _powerLineFrequency, Marshal.SizeOf(powerLineFrequency));
+                if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+
+                // Set to metric (millimeters)
+                bool metricDataFlag = true;
+                errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.METRIC, ref metricDataFlag, Marshal.SizeOf(metricDataFlag));
                 if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
 
                 // Search for the first attached transmitter and turn it on
@@ -132,12 +153,21 @@ namespace TrakstarInterface
                 for (ushort i = 0; i < tracker.numberSensors; i++)
                 {
                     DATA_FORMAT_TYPE type = DATA_FORMAT_TYPE.DOUBLE_POSITION_ANGLES_TIME_Q;
+                    HEMISPHERE_TYPE hemType = HEMISPHERE_TYPE.BOTTOM;
+
                     errorCode = SetSensorParameter(i, SENSOR_PARAMETER_TYPE.DATA_FORMAT, ref type, Marshal.SizeOf((int)type));
                     if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+
+                    // Set Hemisphere to Bottom so that Z is always positive
+                    //errorCode = SetSensorParameter(i, SENSOR_PARAMETER_TYPE.HEMISPHERE, ref hemType, Marshal.SizeOf((int)hemType));
+                    //if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS) errorHandler(errorCode);
                 }
+
+
                 #endregion
             });
 
+            // Set device to be active now that all the configuration is completed successfully
             _IsActive = true;
         }
 
@@ -192,6 +222,46 @@ namespace TrakstarInterface
             return tracker.numberSensors;
         }
 
+        public int setSamplingFrequency(double freq)
+        {
+            if (freq < 40.0f || freq > 255.0f)
+            {
+                return -1;
+            }
+
+            double _samplingFreq = freq;
+            int errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.MEASUREMENT_RATE, ref _samplingFreq, Marshal.SizeOf(_samplingFreq));
+            if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
+            {
+                errorHandler(errorCode);
+                return -1;
+            }
+
+            samplingFrequency = freq;
+
+            return 1;
+        }
+
+        public int setPowerLineFrequency(double freq)
+        {
+            if (freq != 60.0 || freq != 50.0)
+            {
+                return -1;
+            }
+
+            // Set Power Line Frequency
+            double _powerLineFrequency = freq;
+            int errorCode = SetSystemParameter(SYSTEM_PARAMETER_TYPE.POWER_LINE_FREQUENCY, ref _powerLineFrequency, Marshal.SizeOf(powerLineFrequency));
+            if (errorCode != (int)BIRD_ERROR_CODES.BIRD_ERROR_SUCCESS)
+            {
+                errorHandler(errorCode);
+                return -1;
+            }
+
+            powerLineFrequency = freq;
+            return 1;
+        }
+
         public bool IsActive()
         {
             return _IsActive;
@@ -210,6 +280,11 @@ namespace TrakstarInterface
 
         #region Public Members
         public double samplingFrequency
+        {
+            get; set;
+        }
+
+        public double powerLineFrequency
         {
             get; set;
         }
