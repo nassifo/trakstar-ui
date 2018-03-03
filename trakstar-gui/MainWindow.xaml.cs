@@ -219,7 +219,7 @@ namespace TrakstarGUI
             // Create a ThreeDScatterChart object
             ThreeDScatterChart c = new ThreeDScatterChart((int)(TrakstarUIWindow.ActualWidth - 200), (int)(TrakstarUIWindow.ActualHeight - LogWindow.ActualHeight - 30));
             
-            c.setPlotRegion(c.getWidth() / 2, c.getHeight() / 2 - 50, chartXWidth, chartYDepth, chartZHeight);
+            c.setPlotRegion(c.getWidth() / 2 - 100, c.getHeight() / 2 - 50, chartXWidth, chartYDepth, chartZHeight);
             c.setViewAngle(chartElevationAngle, chartRotationAngle);
             c.addLegend(0, 0);
             
@@ -305,6 +305,8 @@ namespace TrakstarGUI
 
         public void LogMessageToWindow(string text)
         {
+            LogWindow.AppendText(DateTime.Now.ToString("h:mm:ss tt"));
+            LogWindow.AppendText(" - ");
             LogWindow.AppendText(text);
             LogWindow.AppendText("\u2028"); // Linebreak, not paragraph break
             LogWindow.ScrollToEnd();
@@ -363,11 +365,6 @@ namespace TrakstarGUI
         }
 
         #region Button Click Events
-        private void Edit_Info_Click(object sender, RoutedEventArgs e)
-        {
-            MessageBox.Show("Created by Omar Nassif. Test message.", "Info Box");
-        }
-
         private void CSVSaveButton_Click(object sender, RoutedEventArgs e)
         {
             // Configure save file dialog box
@@ -597,6 +594,10 @@ namespace TrakstarGUI
             if (!String.IsNullOrEmpty(XWidthControl.Text))
                 chartXWidth = int.Parse(XWidthControl.Text);
         }
+        #endregion
+
+        #region Tab Control Management
+        
         #endregion
     }
 }
