@@ -11,8 +11,7 @@ Trakstar GUI
 # To-do #
 
 	Priority:
-	- Ask Vickie about if 3D graph is good, and if my idea about out of bounds sensor display is ok, and 
-	- if the fact that X is never negative is okay
+	- Disable Save As button after recording started
 	
 	- Investigate why the Q values are what they are... is it a problem? If so, how to fix? Does it have
 	- to do with the filters? Do I need to enable filters? Maybe contact NDI about this...
@@ -22,7 +21,7 @@ Trakstar GUI
 	- Presisting sampling frequency and power line frequency
 	
 	Less important for now:
-	- Testing program on another computer, compiling everything into one exe (32/64 bit)
+	- Compiling everything into one exe (32/64 bit)
 
 
 

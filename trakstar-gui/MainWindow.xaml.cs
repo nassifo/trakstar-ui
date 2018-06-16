@@ -22,29 +22,31 @@ namespace TrakstarGUI
     {
         // Chart related variables
         private const int bufferSize = 50;
-
-        ObservableCollection<Sensor> SensorList = new ObservableCollection<Sensor>();
-
         private int chartElevationAngle;
         private int chartRotationAngle;
-
         private int chartXWidth;
         private int chartYDepth;
         private int chartZHeight;
+        ObservableCollection<Sensor> SensorList = new ObservableCollection<Sensor>();
+        
 
         // Instance of the Trakstar
         private Trakstar bird;
 
+
         // Timer used to updated the chart
         private DispatcherTimer chartUpdateTimer = new DispatcherTimer(DispatcherPriority.Render);
+
 
         // The timer used to keep track of how long we have been recording for
         private DispatcherTimer RecordingTimer = new DispatcherTimer(DispatcherPriority.Background);
         private DateTime RecordingTimerStart;
 
+
         // Token for Task
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         CancellationToken token;
+
 
         // Properties for file I/O
         private String outputFileName = String.Empty;
@@ -219,6 +221,7 @@ namespace TrakstarGUI
             // Create a ThreeDScatterChart object
             ThreeDScatterChart c = new ThreeDScatterChart((int)(TrakstarUIWindow.ActualWidth - 200), (int)(TrakstarUIWindow.ActualHeight - LogWindow.ActualHeight - 30));
             
+
             c.setPlotRegion(c.getWidth() / 2 - 100, c.getHeight() / 2 - 50, chartXWidth, chartYDepth, chartZHeight);
             c.setViewAngle(chartElevationAngle, chartRotationAngle);
             c.addLegend(0, 0);
@@ -248,7 +251,9 @@ namespace TrakstarGUI
             c.yAxis().setLinearScale(-500, 500, 50);
             c.zAxis().setLinearScale(-300, 20, 20);
 
-            
+            // Add transmitter icon to graph
+            c.addScatterGroup(new double[] { 200 }, new double[] { 10 }, new double[] { 20 }).setDataSymbol2("transmitterimage.png");
+
             // Assign the chart to the WinChartViewer
             viewer.Chart = c;
         }
@@ -314,10 +319,11 @@ namespace TrakstarGUI
 
         private void DataPolling()
         {
-            while (true)
-            {
-                DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records;
 
+            DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records;
+
+            while (!token.IsCancellationRequested)
+            {
                 try
                 {
                     // Get all the new data records for all sensors and all degrees of freedom (x,y,z,a,e,r)
@@ -358,9 +364,7 @@ namespace TrakstarGUI
                     }
 
                     outputFile.WriteLine();
-                }
-
-                if (token.IsCancellationRequested) break;
+                }         
             }
         }
 
@@ -475,11 +479,11 @@ namespace TrakstarGUI
         {
             if (readyToWriteToOutput)
             {
-                String headerLine = "timestamp,status,button,";
+                String headerLine = "timestamp, status, button,";
 
                 for (int i = 1; i < 9; i++)
                 {
-                    headerLine += ("x" + i + "," + "y" + i + "," + "z" + i + "," + "a" + i + "," + "e" + i + "," + "r" + i + "," + "q" + i + ",");
+                    headerLine += (" x" + i + "," + " y" + i + "," + " z" + i + "," + " a" + i + "," + " e" + i + "," + " r" + i + "," + " q" + i + ",");
                 }
 
                 outputFile.WriteLine(headerLine);
@@ -487,6 +491,7 @@ namespace TrakstarGUI
                 writeToOutputFlag = true;
                 StartButton.IsEnabled = false;
                 StopButton.IsEnabled = true;
+                CSVSaveButton.IsEnabled = false;
 
                 // Enable Timer/Counter
                 RecordingTimerControl.Visibility = System.Windows.Visibility.Visible;
@@ -508,6 +513,7 @@ namespace TrakstarGUI
             writeToOutputFlag = false;
             StartButton.IsEnabled = true;
             StopButton.IsEnabled = false;
+            CSVSaveButton.IsEnabled = true;
 
             // Reset Save As parameters and close file stream?
             outputFileName = String.Empty;
@@ -549,16 +555,23 @@ namespace TrakstarGUI
             if (!string.IsNullOrEmpty(selectedText))
             {
                 chartUpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, int.Parse(selectedText));
-                
-                int error = bird.setSamplingFrequency(double.Parse(selectedText));
 
-                if (error == -1)
+                try
                 {
-                    LogMessageToWindow("Could not change sampling frequency.");
-                }
-                else
+                    int error = bird.setSamplingFrequency(int.Parse(selectedText));
+
+                    if (error == -1)
+                    {
+                        LogMessageToWindow("Could not change sampling frequency.");
+                    }
+                    else
+                    {
+                        LogMessageToWindow("Sampling frequency of Trakstar changed successfully to: " + selectedText);
+                    }
+                } 
+                catch(Exception ex)
                 {
-                    LogMessageToWindow("Sampling frequency of Trakstar changed successfully to: " + selectedText);
+                    LogMessageToWindow(ex.Message);
                 }
             }
         }
