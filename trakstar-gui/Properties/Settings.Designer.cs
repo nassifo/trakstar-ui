@@ -106,5 +106,17 @@ namespace trakstar_gui.Properties {
                 this["powerlineFreq"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double samplingFreq {
+            get {
+                return ((double)(this["samplingFreq"]));
+            }
+            set {
+                this["samplingFreq"] = value;
+            }
+        }
     }
 }

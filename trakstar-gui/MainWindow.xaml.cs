@@ -27,6 +27,8 @@ namespace TrakstarGUI
         private int chartXWidth;
         private int chartYDepth;
         private int chartZHeight;
+        private double powerlineFreq;
+        private double samplingFreq;
         ObservableCollection<Sensor> SensorList = new ObservableCollection<Sensor>();
         
 
@@ -47,7 +49,6 @@ namespace TrakstarGUI
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         CancellationToken token;
 
-
         // Properties for file I/O
         private String outputFileName = String.Empty;
         private bool readyToWriteToOutput = false;
@@ -59,13 +60,55 @@ namespace TrakstarGUI
         {
             InitializeComponent();
         }
-        
+
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            // Retrieve previous settings for trakstar if they were saved
+            var _powerlineFrequency = trakstar_gui.Properties.Settings.Default.powerlineFreq;
+            var _samplingFrequency = trakstar_gui.Properties.Settings.Default.samplingFreq;
+
+            if (_powerlineFrequency == 60)
+            {
+                powerLineFrequency.SelectedIndex = 0;
+                powerlineFreq = _powerlineFrequency;
+                LogMessageToWindow("Found previous powerline setting: " + _powerlineFrequency.ToString());
+            }
+            else if (_powerlineFrequency == 50)
+            {
+                powerLineFrequency.SelectedIndex = 1;
+                powerlineFreq = _powerlineFrequency;
+                LogMessageToWindow("Found previous powerline setting: " + _powerlineFrequency.ToString());
+            }
+            else 
+            {
+                MessageBox.Show("Please check if Power Line Frequency setting needs to be changed under Advanced Settings.", "Previous Settings Not Found", MessageBoxButton.OK);
+                powerLineFrequency.SelectedIndex = 0;
+                powerlineFreq = 60;
+            }
+
+            if (_samplingFrequency == 60)
+            {
+                sampleFrequency.SelectedIndex = 1;
+                samplingFreq = _samplingFrequency;
+                LogMessageToWindow("Found previous sampling rate setting: " + _samplingFrequency.ToString());
+            }
+            else if (_samplingFrequency == 100)
+            {
+                sampleFrequency.SelectedIndex = 0;
+                samplingFreq = _samplingFrequency;
+                LogMessageToWindow("Found previous sampling rate setting: " + _samplingFrequency.ToString());
+            }
+            else
+            {
+                MessageBox.Show("Please check if Sampling Frequency setting needs to be changed under Advanced Settings!", "Previous Settings Not Found", MessageBoxButton.OK);
+                sampleFrequency.SelectedIndex = 1;
+                samplingFreq = 60;
+            }
+
             // Create instance of Trakstar device with selected sampling rate
-            bird = new Trakstar(double.Parse(sampleFrequency.Text));
+            bird = new Trakstar(samplingFreq, powerlineFreq);
             
-            LogMessageToWindow("Loading Trakstar system...");
+            LogMessageToWindow("Loading Trakstar, please wait (about 30 seconds)...");
 
             // Initialize Trakstar system
             try
@@ -176,15 +219,6 @@ namespace TrakstarGUI
                 // Store sensor names
                 trakstar_gui.Properties.Settings.Default.SensorDisplayNames = JsonConvert.SerializeObject(sensorNames);
 
-                // Store set chart view configuration 
-                trakstar_gui.Properties.Settings.Default.elevationAngle = chartElevationAngle;
-                trakstar_gui.Properties.Settings.Default.rotationAngle = chartRotationAngle;
-                trakstar_gui.Properties.Settings.Default.xwidth = chartXWidth;
-                trakstar_gui.Properties.Settings.Default.ydepth = chartYDepth;
-                trakstar_gui.Properties.Settings.Default.zheight = chartZHeight;
-
-                trakstar_gui.Properties.Settings.Default.Save();
-
                 cancellationTokenSource.Cancel();
                 bird.TrakstarOff();
 
@@ -193,7 +227,21 @@ namespace TrakstarGUI
                     outputFile.Close();
                     s.Close();
                 }
-            }
+            }   
+
+            // Store set chart view configuration 
+            trakstar_gui.Properties.Settings.Default.elevationAngle = chartElevationAngle;
+            trakstar_gui.Properties.Settings.Default.rotationAngle = chartRotationAngle;
+            trakstar_gui.Properties.Settings.Default.xwidth = chartXWidth;
+            trakstar_gui.Properties.Settings.Default.ydepth = chartYDepth;
+            trakstar_gui.Properties.Settings.Default.zheight = chartZHeight;
+
+            // Store advanced settings
+            trakstar_gui.Properties.Settings.Default.powerlineFreq = powerlineFreq;
+            trakstar_gui.Properties.Settings.Default.samplingFreq = samplingFreq;
+
+            // Save the settings
+            trakstar_gui.Properties.Settings.Default.Save();
         }
 
         //
@@ -231,7 +279,7 @@ namespace TrakstarGUI
             {
                 string LegendText = sensorData.DisplayName;
 
-                if (sensorData.currentXCoord > 660 || sensorData.currentXCoord < 200 || sensorData.currentYCoord > 500 || sensorData.currentYCoord < -500 || sensorData.currentZCoord > 20 || sensorData.currentZCoord < -300)
+                if (sensorData.currentXCoord > 660 || sensorData.currentXCoord < 200 || sensorData.currentYCoord > 500 || sensorData.currentYCoord < -500 || sensorData.currentZCoord > 40 || sensorData.currentZCoord < -300)
                 {
                     LegendText += "<*color=FF0000*> - OUT OF OPTIMAL RANGE";
                 }
@@ -241,15 +289,15 @@ namespace TrakstarGUI
             }
 
             // Set the x, y and z axis titles
-            c.xAxis().setTitle("X-Axis", "Arial Bold", 12);
-            c.yAxis().setTitle("Y-Axis", "Arial Bold", 12);
-            c.zAxis().setTitle("Z-Axis", "Arial Bold", 12);
+            c.xAxis().setTitle("X-Axis (millimeters)", "Arial Bold", 12);
+            c.yAxis().setTitle("Y-Axis (millimeters)", "Arial Bold", 12);
+            c.zAxis().setTitle("Z-Axis (millimeters)", "Arial Bold", 12);
 
             c.zAxis().setReverse();
 
             c.xAxis().setLinearScale(200, 660, 20);
             c.yAxis().setLinearScale(-500, 500, 50);
-            c.zAxis().setLinearScale(-300, 20, 20);
+            c.zAxis().setLinearScale(-300, 40, 20);
 
             // Add transmitter icon to graph
             c.addScatterGroup(new double[] { 200 }, new double[] { 10 }, new double[] { 20 }).setDataSymbol2("transmitterimage.png");
@@ -266,14 +314,6 @@ namespace TrakstarGUI
             for (int i = 1; i < data.Length; ++i)
                 data[i - 1] = data[i];
             data[data.Length - 1] = newValue;
-        }
-        private double MillisecondToHz(double period)
-        {
-            return (1 / (period / 1000));
-        }
-        private double HzToMillisecond(double frequency)
-        {
-            return ((1 / frequency) * 1000);
         }
 
         public class Sensor
@@ -531,47 +571,27 @@ namespace TrakstarGUI
 
         private void powerLineFrequency_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            var selectedText = (powerLineFrequency.SelectedValue as ComboBoxItem).Content as string;
-
-            if (!string.IsNullOrEmpty(selectedText))
+            if (bird != null)
             {
-                int error = bird.setPowerLineFrequency(double.Parse(selectedText));
+                var selectedText = (powerLineFrequency.SelectedValue as ComboBoxItem).Content as string;
+                if (!string.IsNullOrEmpty(selectedText))
+                {
+                    powerlineFreq = double.Parse(selectedText);
 
-                if (error == -1)
-                {
-                    LogMessageToWindow("Could not change power line frequency.");
+                    MessageBox.Show("Please CLOSE the application and RE-LAUNCH it for the changes to take effect.", "Restart Application", MessageBoxButton.OK);
                 }
-                else
-                {
-                    LogMessageToWindow("Power line frequency settings changed to: " + selectedText);
-                }
-            }
+            }   
         }
-
         private void sampleFrequency_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            var selectedText = (sampleFrequency.SelectedValue as ComboBoxItem).Content as string;
-
-            if (!string.IsNullOrEmpty(selectedText))
+            if (bird != null)
             {
-                chartUpdateTimer.Interval = new TimeSpan(0, 0, 0, 0, int.Parse(selectedText));
-
-                try
+                var selectedText = (sampleFrequency.SelectedValue as ComboBoxItem).Content as string;
+                if (!string.IsNullOrEmpty(selectedText))
                 {
-                    int error = bird.setSamplingFrequency(int.Parse(selectedText));
+                    samplingFreq = double.Parse(selectedText);
 
-                    if (error == -1)
-                    {
-                        LogMessageToWindow("Could not change sampling frequency.");
-                    }
-                    else
-                    {
-                        LogMessageToWindow("Sampling frequency of Trakstar changed successfully to: " + selectedText);
-                    }
-                } 
-                catch(Exception ex)
-                {
-                    LogMessageToWindow(ex.Message);
+                    MessageBox.Show("Please CLOSE the application and RE-LAUNCH it for the changes to take effect.", "Restart Application", MessageBoxButton.OK);
                 }
             }
         }

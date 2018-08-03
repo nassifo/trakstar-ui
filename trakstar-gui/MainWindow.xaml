@@ -11,7 +11,7 @@
         Title="GM Assessment" ResizeMode="CanResize" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen"
         Height="{Binding SystemParameters.PrimaryScreenHeight}"
         Width="{Binding SystemParameters.PrimaryScreenWidth}"
-        Icon="favicon.ico" Closing="Window_Closing"
+        Closing="Window_Closing"
         >
     <TabControl>
         <TabItem Header="Trakstar">
@@ -32,8 +32,8 @@
                 <ChartDirector:WPFChartViewer x:Name="SensorDataChart" Margin="5" ViewPortChanged="SensorDataChart_ViewPortChanged" Grid.Column="0" Grid.Row="1" />
 
                 <!-- Sidebar Controls -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Row="1" Grid.Column="1" Background="#FFF0F0F0" >
-                    <StackPanel Width="250" Margin="5" Orientation="Vertical" VerticalAlignment="Center">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Row="1" Grid.Column="1" Background="#FFF0F0F0">
+                    <StackPanel Width="250" Margin="5" Orientation="Vertical" VerticalAlignment="Top">
                         <TextBlock Text="Trakstar Controls" Margin="5" FontWeight="Bold" HorizontalAlignment="Center" />
 
                         <!-- Start and Stop Buttons for controlling file IO -->
@@ -89,17 +89,17 @@
                             <StackPanel Orientation="Vertical">
 
                                 <!-- Choosing the trakstar sampling rate -->
-                                <TextBlock Text="Sampling Frequency (Hz)" Margin="5" />
+                                <TextBlock Text="SAMPLING FREQUENCY (Hz)" Margin="5" />
                                 <ComboBox x:Name="sampleFrequency" Margin="3" SelectionChanged="sampleFrequency_SelectionChanged">
-                                    <ComboBoxItem IsSelected="True">100</ComboBoxItem>
-                                    <ComboBoxItem>60</ComboBoxItem>
+                                    <ComboBoxItem Content="100.0"></ComboBoxItem>
+                                    <ComboBoxItem Content="60.0"></ComboBoxItem>
                                 </ComboBox>
 
                                 <!-- Choosing the POWER LINE FREQUENCY -->
                                 <TextBlock Text="POWER LINE FREQUENCY (Hz)" Margin="5" />
                                 <ComboBox x:Name="powerLineFrequency" Margin="3" SelectionChanged="powerLineFrequency_SelectionChanged">
-                                    <ComboBoxItem IsSelected="True">60.0</ComboBoxItem>
-                                    <ComboBoxItem>50.0</ComboBoxItem>
+                                    <ComboBoxItem Content="60.0"></ComboBoxItem>
+                                    <ComboBoxItem Content="50.0"></ComboBoxItem>
                                 </ComboBox>
 
                             </StackPanel>
@@ -109,7 +109,7 @@
 
                 <!-- Error Console -->
                 <GridSplitter Grid.Row="2" Height="8" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Stretch"/>
-                <RichTextBox IsEnabled="True" IsReadOnly="True" Name="LogWindow" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
+                <RichTextBox FontSize="14" IsEnabled="True" IsReadOnly="True" Name="LogWindow" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
                     <FlowDocument/>
                 </RichTextBox>
             </Grid>
