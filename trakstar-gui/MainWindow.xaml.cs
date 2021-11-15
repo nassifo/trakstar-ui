@@ -21,7 +21,7 @@ namespace TrakstarGUI
     public partial class TrakstarWindow : Window
     {
         // Chart related variables
-        private const int bufferSize = 50;
+        private const int bufferSize = 30;
         private int chartElevationAngle;
         private int chartRotationAngle;
         private int chartXWidth;
@@ -63,46 +63,51 @@ namespace TrakstarGUI
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            
             // Retrieve previous settings for trakstar if they were saved
-            var _powerlineFrequency = trakstar_gui.Properties.Settings.Default.powerlineFreq;
-            var _samplingFrequency = trakstar_gui.Properties.Settings.Default.samplingFreq;
+            powerlineFreq = trakstar_gui.Properties.Settings.Default.powerlineFreq;
+            samplingFreq = trakstar_gui.Properties.Settings.Default.samplingFreq;
 
-            if (_powerlineFrequency == 60)
+            // TODO: get rid of these if statements and make the combobox binding automatically
+            //       select the item it is set to...
+            if (powerlineFreq == 60)
             {
                 powerLineFrequency.SelectedIndex = 0;
-                powerlineFreq = _powerlineFrequency;
-                LogMessageToWindow("Found previous powerline setting: " + _powerlineFrequency.ToString());
+                LogMessageToWindow("Found previous powerline setting: 60");
             }
-            else if (_powerlineFrequency == 50)
+            else if (powerlineFreq == 50)
             {
                 powerLineFrequency.SelectedIndex = 1;
-                powerlineFreq = _powerlineFrequency;
-                LogMessageToWindow("Found previous powerline setting: " + _powerlineFrequency.ToString());
+                LogMessageToWindow("Found previous powerline setting: 50");
             }
-            else 
+            else
             {
                 MessageBox.Show("Please check if Power Line Frequency setting needs to be changed under Advanced Settings.", "Previous Settings Not Found", MessageBoxButton.OK);
                 powerLineFrequency.SelectedIndex = 0;
                 powerlineFreq = 60;
             }
 
-            if (_samplingFrequency == 60)
-            {
-                sampleFrequency.SelectedIndex = 1;
-                samplingFreq = _samplingFrequency;
-                LogMessageToWindow("Found previous sampling rate setting: " + _samplingFrequency.ToString());
-            }
-            else if (_samplingFrequency == 100)
+
+            if (samplingFreq == 110)
             {
                 sampleFrequency.SelectedIndex = 0;
-                samplingFreq = _samplingFrequency;
-                LogMessageToWindow("Found previous sampling rate setting: " + _samplingFrequency.ToString());
+                LogMessageToWindow("Found previous sampling rate setting: 110");
+            }
+            else if (samplingFreq == 100)
+            {
+                sampleFrequency.SelectedIndex = 1;
+                LogMessageToWindow("Found previous sampling rate setting: 100");
+            }
+            else if (samplingFreq == 80)
+            {
+                sampleFrequency.SelectedIndex = 2;
+                LogMessageToWindow("Found previous sampling rate setting: 80");
             }
             else
             {
                 MessageBox.Show("Please check if Sampling Frequency setting needs to be changed under Advanced Settings!", "Previous Settings Not Found", MessageBoxButton.OK);
-                sampleFrequency.SelectedIndex = 1;
-                samplingFreq = 60;
+                sampleFrequency.SelectedIndex = 0;
+                samplingFreq = 110;
             }
 
             // Create instance of Trakstar device with selected sampling rate
@@ -153,8 +158,7 @@ namespace TrakstarGUI
             // If the trakstar is active, load sensor data and begin data polling
             if (bird.IsActive())
             {
-                LogMessageToWindow("Device setup successful! To begin recording, select an output file by clicking on Save As and then hit Start Recording");
-
+                
                 // Initialize buffer list to contain sensor data
                 for (int i = 0; i < bird.GetNumberOfSensors(); i++)
                 {
@@ -193,7 +197,9 @@ namespace TrakstarGUI
                 
                 // Enable start button because we can record now
                 StartButton.IsEnabled = true;
-               
+
+                LogMessageToWindow("Device setup successful! To begin recording, select an output file by clicking on Save As and then hit Start Recording");
+
                 // Start data polling Task/Thread
                 var listener = Task.Factory.StartNew(() => DataPolling()
                 , token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
@@ -227,20 +233,16 @@ namespace TrakstarGUI
                     outputFile.Close();
                     s.Close();
                 }
-            }   
+            }
 
-            // Store set chart view configuration 
-            trakstar_gui.Properties.Settings.Default.elevationAngle = chartElevationAngle;
-            trakstar_gui.Properties.Settings.Default.rotationAngle = chartRotationAngle;
+            // Store chart view settings
             trakstar_gui.Properties.Settings.Default.xwidth = chartXWidth;
             trakstar_gui.Properties.Settings.Default.ydepth = chartYDepth;
-            trakstar_gui.Properties.Settings.Default.zheight = chartZHeight;
-
-            // Store advanced settings
-            trakstar_gui.Properties.Settings.Default.powerlineFreq = powerlineFreq;
-            trakstar_gui.Properties.Settings.Default.samplingFreq = samplingFreq;
-
-            // Save the settings
+            trakstar_gui.Properties.Settings.Default.zheight= chartZHeight;
+            trakstar_gui.Properties.Settings.Default.elevationAngle = chartElevationAngle;
+            trakstar_gui.Properties.Settings.Default.rotationAngle = chartRotationAngle;
+            
+            // Save user settings
             trakstar_gui.Properties.Settings.Default.Save();
         }
 
@@ -568,33 +570,6 @@ namespace TrakstarGUI
             outputFile.Close();
             s.Close();
         }
-
-        private void powerLineFrequency_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (bird != null)
-            {
-                var selectedText = (powerLineFrequency.SelectedValue as ComboBoxItem).Content as string;
-                if (!string.IsNullOrEmpty(selectedText))
-                {
-                    powerlineFreq = double.Parse(selectedText);
-
-                    MessageBox.Show("Please CLOSE the application and RE-LAUNCH it for the changes to take effect.", "Restart Application", MessageBoxButton.OK);
-                }
-            }   
-        }
-        private void sampleFrequency_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (bird != null)
-            {
-                var selectedText = (sampleFrequency.SelectedValue as ComboBoxItem).Content as string;
-                if (!string.IsNullOrEmpty(selectedText))
-                {
-                    samplingFreq = double.Parse(selectedText);
-
-                    MessageBox.Show("Please CLOSE the application and RE-LAUNCH it for the changes to take effect.", "Restart Application", MessageBoxButton.OK);
-                }
-            }
-        }
         #endregion
 
         #region Chart View Events
@@ -627,10 +602,40 @@ namespace TrakstarGUI
             if (!String.IsNullOrEmpty(XWidthControl.Text))
                 chartXWidth = int.Parse(XWidthControl.Text);
         }
+
+        private void powerLineFrequency_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (bird != null)
+            {
+                MessageBox.Show("Please CLOSE the application and RE-LAUNCH it for the changes to take effect.", "Restart Application", MessageBoxButton.OK);
+            }
+        }
+
+        private void sampleFrequency_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (bird != null)
+            {
+                MessageBox.Show("Please CLOSE the application and RE-LAUNCH it for the changes to take effect.", "Restart Application", MessageBoxButton.OK);
+            }
+        }
         #endregion
 
         #region Tab Control Management
-        
+
         #endregion
+
+        private void DateControl_SelectedDateChanged(object sender, SelectionChangedEventArgs e)
+        {
+            DateTime? recordingDate = RecordingDateControl.SelectedDate;
+            DateTime? dueDate = DueDateControl.SelectedDate;
+
+            if (recordingDate.HasValue && dueDate.HasValue)
+            {
+                int ageInDays = (recordingDate.Value - dueDate.Value).Days;
+                int correctedAgeInWeeks = ageInDays / 7;
+
+                CorrectedAgeDisplay.Text = correctedAgeInWeeks.ToString();
+            }
+        }
     }
 }

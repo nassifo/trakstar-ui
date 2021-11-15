@@ -9,19 +9,24 @@ namespace TrakstarInterface
 {
     public class Trakstar
     {
-        // Todo: see if I can encapsulate the pinvoke methods in a cleaner way
+        // Todo: Switching between 32-bit and 64-bit depending on system?
+        // Use visual studio command prompt, run command: dumpbin /exports whatever.dll
+        // to figure what the function names exported by the C++ DLL are, they are apparently,
+        // different between the 32-bit and 64-bit DLL >_>
         #region PInvoke Methods
-        [DllImport("ATC3DG64.DLL")]
+        [DllImport("ATC3DG64.DLL", EntryPoint = "InitializeBIRDSystem")]
         public static extern int InitializeBIRDSystem();
 
-        [DllImport("ATC3DG64.DLL")]
+        [DllImport("ATC3DG64.DLL", EntryPoint = "GetErrorText")]
         public static extern int GetErrorText(int errorCode, StringBuilder pBuffer, int bufferSize, MESSAGE_TYPE type);
 
-        [DllImport("ATC3DG64.DLL", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("ATC3DG64.DLL", EntryPoint = "GetBIRDSystemConfiguration")]
         public static extern int GetBIRDSystemConfiguration(out SYSTEM_CONFIGURATION tracker);
-        [DllImport("ATC3DG64.DLL")]
+
+        [DllImport("ATC3DG64.DLL", EntryPoint = "GetSensorConfiguration")]
         public static extern int GetSensorConfiguration(ushort sensorID, out SENSOR_CONFIGURATION sensorConfiguration);
-        [DllImport("ATC3DG64.DLL")]
+
+        [DllImport("ATC3DG64.DLL", EntryPoint = "GetTransmitterConfiguration")]
         public static extern int GetTransmitterConfiguration(ushort transmitterID, out TRANSMITTER_CONFIGURATION sensorConfiguration);
 
         [DllImport("ATC3DG64.DLL", EntryPoint = "SetSystemParameter")]
@@ -42,13 +47,13 @@ namespace TrakstarInterface
         [DllImport("ATC3DG64.DLL", EntryPoint = "SetSensorParameter")]
         public static extern int SetSensorParameter(ushort sensorID, SENSOR_PARAMETER_TYPE parameterType, ref HEMISPHERE_TYPE pBuffer, int bufferSize);
 
-        [DllImport("ATC3DG64.DLL", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("ATC3DG64.DLL", EntryPoint = "GetSynchronousRecord")]
         public static extern int GetSynchronousRecord(ushort sensorID, [Out] DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records, int recordSize);
 
-        [DllImport("ATC3DG64.DLL")]
+        [DllImport("ATC3DG64.DLL", EntryPoint = "GetAsynchronousRecord")]
         public static extern int GetAsynchronousRecord(ushort sensorID, [Out] DOUBLE_POSITION_ANGLES_TIME_Q_RECORD[] records, int recordSize);
 
-        [DllImport("ATC3DG64.DLL")]
+        [DllImport("ATC3DG64.DLL", EntryPoint = "GetSensorStatus")]
         public static extern ulong GetSensorStatus(ushort sensorID);
         
         #endregion

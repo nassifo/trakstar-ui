@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+        xmlns:p="clr-namespace:trakstar_gui.Properties"
         xmlns:local="clr-namespace:TrakstarGUI"
         mc:Ignorable="d"
         Name="TrakstarUIWindow"
@@ -90,16 +91,28 @@
 
                                 <!-- Choosing the trakstar sampling rate -->
                                 <TextBlock Text="SAMPLING FREQUENCY (Hz)" Margin="5" />
-                                <ComboBox x:Name="sampleFrequency" Margin="3" SelectionChanged="sampleFrequency_SelectionChanged">
-                                    <ComboBoxItem Content="100.0"></ComboBoxItem>
-                                    <ComboBoxItem Content="60.0"></ComboBoxItem>
+                                <ComboBox x:Name="sampleFrequency" Margin="3" 
+                                          SelectedValuePath="Content"
+                                          SelectedValue="{Binding Source={x:Static p:Settings.Default},
+                                          Path=samplingFreq, Mode=TwoWay}"
+                                          SelectionChanged="sampleFrequency_SelectionChanged" 
+                                          >
+                                    <ComboBoxItem>110.0</ComboBoxItem>
+                                    <ComboBoxItem>100.0</ComboBoxItem>
+                                    <ComboBoxItem>80.0</ComboBoxItem>
                                 </ComboBox>
 
                                 <!-- Choosing the POWER LINE FREQUENCY -->
+                                <!-- SelectionChanged="powerLineFrequency_SelectionChanged" -->
                                 <TextBlock Text="POWER LINE FREQUENCY (Hz)" Margin="5" />
-                                <ComboBox x:Name="powerLineFrequency" Margin="3" SelectionChanged="powerLineFrequency_SelectionChanged">
-                                    <ComboBoxItem Content="60.0"></ComboBoxItem>
-                                    <ComboBoxItem Content="50.0"></ComboBoxItem>
+                                <ComboBox x:Name="powerLineFrequency" Margin="3" 
+                                          SelectedValuePath="Name"
+                                          SelectedValue="{Binding Source={x:Static p:Settings.Default},
+                                          Path=powerlineFreq, Mode=TwoWay}"
+                                          SelectionChanged="powerLineFrequency_SelectionChanged" 
+                                          >
+                                    <ComboBoxItem>60.0</ComboBoxItem>
+                                    <ComboBoxItem>50.0</ComboBoxItem>
                                 </ComboBox>
 
                             </StackPanel>
@@ -115,7 +128,16 @@
             </Grid>
         </TabItem>
         <TabItem Header="Analysis">
-            <Label Content="Machine learning tab"/>
+            <StackPanel>
+                <TextBlock Margin="5" FontSize="18">Select <Bold>date of recording</Bold></TextBlock>
+                <DatePicker x:Name="RecordingDateControl" SelectedDateChanged="DateControl_SelectedDateChanged" HorizontalAlignment="Left" Width="300" Height="50" Margin="3"></DatePicker>
+                <TextBlock Margin="5" FontSize="18">Select <Bold>due date of infant</Bold></TextBlock>
+                <DatePicker x:Name="DueDateControl" SelectedDateChanged="DateControl_SelectedDateChanged" HorizontalAlignment="Left" Width="300" Height="50" Margin="3"></DatePicker>
+                <StackPanel Orientation="Horizontal" Margin="0, 20, 0, 0">
+                    <TextBlock Text="Corrected Age (Weeks): " FontSize="18" FontWeight="Bold"/>
+                    <TextBlock x:Name="CorrectedAgeDisplay" FontSize="18" FontWeight="Bold"/>
+                </StackPanel>
+            </StackPanel>
         </TabItem>
     </TabControl>
 </Window>

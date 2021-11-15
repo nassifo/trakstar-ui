@@ -240,3 +240,150 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample/Sample.cpp
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample/Sample.h
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample/Sample.rc
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample/Sample.vcproj
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample/Sample.vcxproj
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample/Sample.vcxproj.filters
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample/StdAfx.cpp
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample/StdAfx.h
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample2/resource.h
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample2/Sample2.cpp
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample2/Sample2.h
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample2/Sample2.rc
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample2/Sample2.vcproj
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample2/StdAfx.cpp
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DG API Developer/Samples/Sample2/StdAfx.h
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/3DGUtil.ini
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/APITest.exe
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/APITest64.exe
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/ATC3DG.DLL
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/ATC3DG64.DLL
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/Cubes.cnt
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/Cubes.exe
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/Cubes.HLP
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/driveBAY Utility.exe
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/glut32.dll
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/Tracker.dll
+Ascension/3D Guidance driveBAY (Rev D1)/Applications/trakStar Utility.exe
+Ascension/3D Guidance driveBAY (Rev D1)/ATC.ico
+Ascension/3D Guidance driveBAY (Rev D1)/ATC_driveBAY_Installation_and_Operation_Guide.pdf
+Ascension/3D Guidance driveBAY (Rev D1)/ATC_trakSTAR_Installation_and_Operation_Guide.pdf
+Ascension/3D Guidance driveBAY (Rev D1)/autorun.inf
+Ascension/3D Guidance driveBAY (Rev D1)/banner.bmp
+Ascension/3D Guidance driveBAY (Rev D1)/DSP Loader Files/DiagStr.diag_bin
+Ascension/3D Guidance driveBAY (Rev D1)/DSP Loader Files/ErrStr.err_bin
+Ascension/3D Guidance driveBAY (Rev D1)/DSP Loader Files/MDSP.mdsp_ldr
+Ascension/3D Guidance driveBAY (Rev D1)/DSP Loader Files/poserver.po_ldr
+Ascension/3D Guidance driveBAY (Rev D1)/pdf.ico
+Ascension/3D Guidance driveBAY (Rev D1)/Readme.rtf
+Ascension/3D Guidance driveBAY (Rev D1)/trakSTAR_MUS_Installation_Guide_addendum.pdf
+Ascension/3D Guidance driveBAY (Rev D1)/USB Drivers/cyusb-x86/ATC3DG.inf
+Ascension/3D Guidance driveBAY (Rev D1)/USB Drivers/cyusb-x86/CyUSB.sys
+Ascension/3D Guidance driveBAY (Rev D1)/USB Drivers/cyusb-x86/dpinst.exe
+Ascension/3D Guidance driveBAY (Rev D1)/USB Drivers/Setup.dll
+Ascension/3D Guidance driveBAY (Rev D1)/USB Drivers/winusb-amd64/ATC3DG.inf
+Ascension/3D Guidance driveBAY (Rev D1)/USB Drivers/winusb-amd64/dpinst.exe
+Ascension/3D Guidance driveBAY (Rev D1)/USB Drivers/winusb-amd64/WdfCoInstaller01007.dll
+Ascension/3D Guidance driveBAY (Rev D1)/USB Drivers/winusb-amd64/WinUSBCoInstaller.dll
+Ascension/3D Guidance driveBAY (Rev D1)/USB Drivers/winusb-x86/ATC3DG.inf
+Ascension/3D Guidance driveBAY (Rev D1)/USB Drivers/winusb-x86/dpinst.exe
+Ascension/3D Guidance driveBAY (Rev D1)/USB Drivers/winusb-x86/WdfCoInstaller01007.dll
+Ascension/3D Guidance driveBAY (Rev D1)/USB Drivers/winusb-x86/WinUSBCoInstaller.dll
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/3DG API/ATC3DG.DLL
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/3DG API/ATC3DG.h
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/3DG API/ATC3DG.lib
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/3DG API/ATC3DG64.DLL
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/3DG API/ATC3DG64.lib
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Binaries/ATC3DG.DLL
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Binaries/ATC3DG64.DLL
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Binaries/GetSynchronousRecord.dat
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Binaries/GetSynchronousRecord.exe
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Binaries/GetSynchronousRecord_x64.exe
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Binaries/Sample.exe
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Binaries/Sample2.exe
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Binaries/Sample2_x64.exe
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Binaries/Sample_x64.exe
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/BinariesDebug/ATC3DG.DLL
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/BinariesDebug/GetSynchronousRecord.dat
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/BinariesDebug/GetSynchronousRecord.exe
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/GetSynchronousRecord Sample/GetSynchronousRecordSample.cpp
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/GetSynchronousRecord Sample/GetSynchronousRecordSample.h
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/GetSynchronousRecord Sample/GetSynchronousRecordSample.rc
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/GetSynchronousRecord Sample/GetSynchronousRecordSample.vcproj
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/GetSynchronousRecord Sample/GetSynchronousRecordSample.vcxproj
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/GetSynchronousRecord Sample/GetSynchronousRecordSample.vcxproj.filters
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/GetSynchronousRecord Sample/RCa11364
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/GetSynchronousRecord Sample/resource.h
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/GetSynchronousRecord Sample/StdAfx.cpp
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/GetSynchronousRecord Sample/StdAfx.h
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample/resource.h
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample/Sample.cpp
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample/Sample.h
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample/Sample.rc
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample/Sample.vcproj
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample/Sample.vcxproj
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample/Sample.vcxproj.filters
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample/StdAfx.cpp
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample/StdAfx.h
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample2/resource.h
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample2/Sample2.cpp
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample2/Sample2.h
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample2/Sample2.rc
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample2/Sample2.vcproj
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample2/StdAfx.cpp
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/3DG API Developer/Samples/Sample2/StdAfx.h
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/Applications/3DGUtil.ini
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/Applications/APITest.exe
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/Applications/APITest64.exe
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/Applications/ATC3DG.DLL
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/Applications/ATC3DG64.DLL
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/Applications/Cubes.cnt
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/Applications/Cubes.exe
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/Applications/Cubes.HLP
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/Applications/driveBAY Utility.exe
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/Applications/glut32.dll
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/Applications/Tracker.dll
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/Applications/trakStar Utility.exe
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/ATC.ico
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/ATC_driveBAY_Installation_and_Operation_Guide.pdf
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/ATC_trakSTAR_Installation_and_Operation_Guide.pdf
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/autorun.inf
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/banner.bmp
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/DSP Loader Files/DiagStr.diag_bin
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/DSP Loader Files/ErrStr.err_bin
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/DSP Loader Files/mdsp.mdsp_ldr
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/DSP Loader Files/poserver.po_ldr
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/Install.msi
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/pdf.ico
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/Readme.rtf
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/setup.exe
+Ascension/3D Guidance driveBAY (Rev E)/940041_RevE/trakSTAR_MUS_Installation_Guide_addendum.pdf
+Ascension/API Samples.zip
+Ascension/autorun.inf
+Ascension/Host Applications.zip
+Ascension/Host Applications/Applications/3DGUtil.ini
+Ascension/Host Applications/Applications/APITest.exe
+Ascension/Host Applications/Applications/APITest64.exe
+Ascension/Host Applications/Applications/ATC3DG.DLL
+Ascension/Host Applications/Applications/ATC3DG64.DLL
+Ascension/Host Applications/Applications/Cubes.cnt
+Ascension/Host Applications/Applications/Cubes.exe
+Ascension/Host Applications/Applications/Cubes.HLP
+Ascension/Host Applications/Applications/driveBAY Utility.exe
+Ascension/Host Applications/Applications/glut32.dll
+Ascension/Host Applications/Applications/Tracker.dll
+Ascension/Host Applications/Applications/trakStar Utility.exe
+Ascension/LICENSE.htm
+Ascension/test.csv
+Ascension/USB Drivers Rev E.zip
+Ascension/USB Drivers Rev E/USB Drivers/amd64/dpinst.exe
+Ascension/USB Drivers Rev E/USB Drivers/amd64/WdfCoInstaller01007.dll
+Ascension/USB Drivers Rev E/USB Drivers/amd64/WinUSBCoInstaller.dll
+Ascension/USB Drivers Rev E/USB Drivers/atc3dg.inf
+Ascension/USB Drivers Rev E/USB Drivers/atc3dgusb.cat
+Ascension/USB Drivers Rev E/USB Drivers/i386/dpinst.exe
+Ascension/USB Drivers Rev E/USB Drivers/i386/WdfCoInstaller01007.dll
+Ascension/USB Drivers Rev E/USB Drivers/i386/WinUSBCoInstaller.dll
+Ascension/USB Drivers Rev E/USB Drivers/Setup.dll
